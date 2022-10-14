@@ -18,3 +18,4 @@ warn_list:
   - yaml
   - no-changed-when
   - git-latest
+  - name[template]
