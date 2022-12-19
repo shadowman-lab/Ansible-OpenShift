@@ -28,11 +28,18 @@
     loop_control:
       label: "{{ item.metadata.name }}"
 
-  - name: Import
+  - name: Login
     kubernetes.core.k8s:
       api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
       host: "{{ openshift_fqdn }}"
       definition: "{{ crds | from_yaml }}"
+      validate_certs: false
+
+  - name: Import
+    kubernetes.core.k8s:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
+      definition: "{{ hostimport | from_yaml }}"
       validate_certs: false
 
   always:
