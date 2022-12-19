@@ -19,6 +19,10 @@
       validate_certs: false
     register: output
 
+  - name: Debug
+    ansible.builtin.debug:
+      msg: "{{ output.resources[9].data.crds.yaml }}"
+
   always:
     - name: If login succeeded, try to log out (revoke access token)
       redhat.openshift.openshift_auth:
