@@ -14,7 +14,8 @@
     kubernetes.core.k8s_info:
       api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
       host: "{{ openshift_fqdn }}"
-      kind: cluster_agents
+      apiVersion: agent-install.openshift.io/v1beta1
+      kind: Agent
       validate_certs: false
     register: output
 
