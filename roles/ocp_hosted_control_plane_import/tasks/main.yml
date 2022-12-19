@@ -15,13 +15,18 @@
       api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
       host: "{{ openshift_fqdn }}"
       kind: Secret
-      namespace: hosted6
+      namespace: "{{ vm_name }}"
       validate_certs: false
     register: output
 
-  - name: Debug
-    ansible.builtin.debug:
-      msg: "{{ output.resources[9].data['crds.yaml'] | b64decode }}"
+  - name: Set name of non approved host
+    ansible.builtin.set_fact:
+      crds: "{{ item..data['crds.yaml'] | b64decode }}"
+      import: "{{ item..data['import.yaml'] | b64decode }}"
+    when: item.metadata.name == {{ vm_name }}-import
+    loop: "{{ output.resources }}"
+    loop_control:
+      label: "{{ item.metadata.name }}"
 
   always:
     - name: If login succeeded, try to log out (revoke access token)
