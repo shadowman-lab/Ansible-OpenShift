@@ -23,8 +23,8 @@
     kubernetes.core.k8s_info:
       api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
       host: "{{ openshift_fqdn }}"
-      api_version: metal3.io/v1alpha1
-      kind: BareMetalHost
+      api_version: metal3.io/v1beta1
+      kind: InfraEnv
       validate_certs: false
     register: output
 
