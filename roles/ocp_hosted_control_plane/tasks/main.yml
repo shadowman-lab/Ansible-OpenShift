@@ -21,7 +21,7 @@
 
   - name: Debug Output
     ansible.builtin.debug:
-      msg: "{{ output.resources[0].name }}"
+      msg: "{{ output.resources[0] }}"
 
   
 
