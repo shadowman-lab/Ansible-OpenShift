@@ -21,7 +21,8 @@
 
   - name: Debug Output
     ansible.builtin.debug:
-      msg: "{{ output.resources[0].metadata.name }}"
+      msg: "{{ item.spec.approved }}"
+    loop: "{{ output.resources }}"
 
   
 
