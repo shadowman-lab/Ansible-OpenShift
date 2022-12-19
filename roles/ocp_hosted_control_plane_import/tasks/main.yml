@@ -21,7 +21,7 @@
 
   - name: Debug
     ansible.builtin.debug:
-      msg: "{{ output.resources[9].data['crds.yaml'] }}"
+      msg: "{{ output.resources[9].data['crds.yaml'] | b64decode }}"
 
   always:
     - name: If login succeeded, try to log out (revoke access token)
