@@ -23,6 +23,8 @@
     ansible.builtin.debug:
       msg: "{{ item.spec.approved }}"
     loop: "{{ output.resources }}"
+    loop_control:
+      label: "{{ item.metadata.name }}"
 
   
 
