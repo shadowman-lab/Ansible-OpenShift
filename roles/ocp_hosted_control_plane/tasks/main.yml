@@ -42,6 +42,165 @@
           approved: true
           hostname: "{{ vm_name }}"
       validate_certs: false
+    when: unapproved_host is defined
+
+  - name: Create a k8s namespace
+    kubernetes.core.k8s:
+      name: "{{ vm_name }}"
+      api_version: v1
+      kind: Namespace
+      state: present
+
+  - name: Create Hosted Cluster
+    kubernetes.core.k8s:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
+      state: present
+      validate_certs: false
+      api_version: hypershift.openshift.io/v1alpha1
+      definition:
+        kind: HostedCluster
+        metadata:
+        name: "{{ vm_name }}"
+        namespace: "{{ vm_name }}"
+        labels:
+          "cluster.open-cluster-management.io/clusterset": 'default'
+        spec:
+        release:
+          image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+        pullSecret:
+          name: pullsecret-cluster-{{ vm_name }}
+        sshKey:
+          name: sshkey-cluster-{{ vm_name }}
+        networking:
+          podCIDR: 10.132.0.0/14
+          serviceCIDR: 172.31.0.0/16
+          machineCIDR: 172.16.2.0/24
+        platform:
+          type: Agent
+          agent:
+            agentNamespace: 'shadowman-lab'
+        infraID: "{{ vm_name }}"
+        dns:
+          baseDomain: 'apps.hypershift.shadowman.dev'
+        services:
+        - service: APIServer
+          servicePublishingStrategy:
+            type: LoadBalancer
+        - service: OAuthServer
+          servicePublishingStrategy:
+            type: Route
+        - service: OIDC
+          servicePublishingStrategy:
+            type: Route
+        - service: Konnectivity
+          servicePublishingStrategy:
+            type: Route
+        - service: Ignition
+          servicePublishingStrategy:
+            type: Route
+
+  - name: Create pull secret
+    kubernetes.core.k8s:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
+      state: present
+      validate_certs: false
+      definition:
+        kind: Secret
+        metadata:
+          name: pullsecret-cluster-{{ vm_name }}
+          namespace: "{{ vm_name }}"
+        data:
+        '.dockerconfigjson': eyJhdXRocyI6eyJjbG91ZC5vcGVuc2hpZnQuY29tIjp7ImF1dGgiOiJiM0JsYm5Ob2FXWjBMWEpsYkdWaGMyVXRaR1YySzI5amJWOWhZMk5sYzNOZk1ETTBOV1F5TUdNellqUm1OREkzTlRsa1pHTTNOV1U1TmprM1pURmhNRE02V1VSSE1Fa3dVVGhGVEV4VFExZEVPVXhCVlU5VVRVWTNRMVEwUnpkQlNFZFRVbFZNVGpJeVRVTk5TRlZHTnpaRFF6SkpSazVNTVZCQlZGbFhVRXRIVVE9PSIsImVtYWlsIjoicHN0cmlja0ByZWRoYXQuY29tIn0sInF1YXkuaW8iOnsiYXV0aCI6ImIzQmxibk5vYVdaMExYSmxiR1ZoYzJVdFpHVjJLMjlqYlY5aFkyTmxjM05mTURNME5XUXlNR016WWpSbU5ESTNOVGxrWkdNM05XVTVOamszWlRGaE1ETTZXVVJITUVrd1VUaEZURXhUUTFkRU9VeEJWVTlVVFVZM1ExUTBSemRCU0VkVFVsVk1Uakl5VFVOTlNGVkdOelpEUXpKSlJrNU1NVkJCVkZsWFVFdEhVUT09IiwiZW1haWwiOiJwc3RyaWNrQHJlZGhhdC5jb20ifSwicmVnaXN0cnkuY29ubmVjdC5yZWRoYXQuY29tIjp7ImF1dGgiOiJmSFZvWXkxd2IyOXNMVEEzWTJWa1l6bG1MVFE1Tm1NdE5HWTNNeTFoTWpSaUxUaGpZMkpqWldJd1pURXhNRHBsZVVwb1lrZGphVTlwU2xOVmVsVjRUV2xLT1M1bGVVcDZaRmRKYVU5cFNURmFWRUY1VFZSQmQwMXRTVEpQUkZVd1dUSlNhVmxVVm1wT2FsSnFXbFJWTTA1cWJHcFpWMXB0VFVOS09TNVJibTA1U0VST1gzcGxlRUY1WDJORlYyWlZVWEZJTjJKRGVUSlVRbWhDYkRadGRsSTNaekIyUldocFNGOTBMVWhrYUVKbFZtNVBTbVpaYnpoWGVWWm1ZblU1TjFOeWJuUmpNREp5ZEMxR2FFZEVVaTExVUhKbVdtNXBhWFZKUzFOVk5ERTFZV3BVVkY5TmRXSTViRWN0TlRjMFEwMTFNVWRPVG10eldIZE1abk14YnpobFpHWXlPVzE2Vms5RmVFWXlRMUE1UzE5NU0zaHFiMEowUW5KWmVVRmlNM05JUWxka05FRlJTbFo2UXpFMGIxZzJURkJsVTBGd1NqWmhVa0V0UW1ReGVYQk1SRlpSWVY5bWIxTXpjbEpVVkZSMU5sOXphMk56V2pGTWFESkpZM0ZDY2psMVQwdE9UVmhuZWtaQlQwVXpSamx0VmtVeWJFbGlOMGhWUnpKTFFsUTVla1JJZW10UFpVY3dhelUwWVVSbExURkVjM3BZVG04M1NHOXRjMWRpY0hwbmEyeFpSMGg0Vm05emVtOVFZekp2ZEVsWE1ITklORXBFUnpWMlRuRjFjVnA0ZG1sVlpHbGxkSHBKTjNVMFFuZFNWMkpwVWtvNWVqaERWazlGVFV0d05HVXlXSE52WjI4d1pHZHZNVk0zTWpKaE5tdHpVVTFuWldGeFJ6WlpkVEp1TkRsbGJXVnBVRFpXVlhOR2NWOU5TV1l4TWtSdmJYbFBVMjFpYzJWTVpUaHFYMlJRYjFKblpUSTJUa0ZSUzFnMlowZ3dhREZSVWpSM1NVcFdSV2xRTjFRd1NVcHRZVTFaYkZkc2JVOHhZa0pVYkc1bVJrUTJZbWRXTFZsSllubHNUMTkxTUhSblpHTmZRblZuWkROVFp6Z3lZMHh4UWpWcUxYbElNRmRpV2s0Mk1TMXJhRVJZVWxJMGQxWnROVzVZUzFGWFpVaHhSRTVxUldaWVptVlNhMk5HZG1GMFFtdzBNVUYzTVRKVE5WSlFTbVkwU2xsMVpXTkhZM1pvYXpkaVVXTndia1oyVTJFeE4waFlYM1pYZWw5TlQxQnJaRlYzZWtnME1HVlpTakprVDJKd1FtWmliRk5GVTJoeU5HbzFlRmR6VUZwSFRqRm1WRll6T1ZsNWVITnBkVE5mYW5sWlZWbGFTRFpIY21WSVluQTViMUY1TFdKQ1duRlJWVEZpV1ZvMFRRPT0iLCJlbWFpbCI6InBzdHJpY2tAcmVkaGF0LmNvbSJ9LCJyZWdpc3RyeS5yZWRoYXQuaW8iOnsiYXV0aCI6ImZIVm9ZeTF3YjI5c0xUQTNZMlZrWXpsbUxUUTVObU10TkdZM015MWhNalJpTFRoalkySmpaV0l3WlRFeE1EcGxlVXBvWWtkamFVOXBTbE5WZWxWNFRXbEtPUzVsZVVwNlpGZEphVTlwU1RGYVZFRjVUVlJCZDAxdFNUSlBSRlV3V1RKU2FWbFVWbXBPYWxKcVdsUlZNMDVxYkdwWlYxcHRUVU5LT1M1UmJtMDVTRVJPWDNwbGVFRjVYMk5GVjJaVlVYRklOMkpEZVRKVVFtaENiRFp0ZGxJM1p6QjJSV2hwU0Y5MExVaGthRUpsVm01UFNtWlpiemhYZVZabVluVTVOMU55Ym5Sak1ESnlkQzFHYUVkRVVpMTFVSEptV201cGFYVkpTMU5WTkRFMVlXcFVWRjlOZFdJNWJFY3ROVGMwUTAxMU1VZE9UbXR6V0hkTVpuTXhiemhsWkdZeU9XMTZWazlGZUVZeVExQTVTMTk1TTNocWIwSjBRbkpaZVVGaU0zTklRbGRrTkVGUlNsWjZRekUwYjFnMlRGQmxVMEZ3U2paaFVrRXRRbVF4ZVhCTVJGWlJZVjltYjFNemNsSlVWRlIxTmw5emEyTnpXakZNYURKSlkzRkNjamwxVDB0T1RWaG5la1pCVDBVelJqbHRWa1V5YkVsaU4waFZSekpMUWxRNWVrUkllbXRQWlVjd2F6VTBZVVJsTFRGRWMzcFlUbTgzU0c5dGMxZGljSHBuYTJ4WlIwaDRWbTl6ZW05UVl6SnZkRWxYTUhOSU5FcEVSelYyVG5GMWNWcDRkbWxWWkdsbGRIcEpOM1UwUW5kU1YySnBVa281ZWpoRFZrOUZUVXR3TkdVeVdITnZaMjh3Wkdkdk1WTTNNakpoTm10elVVMW5aV0Z4UnpaWmRUSnVORGxsYldWcFVEWldWWE5HY1Y5TlNXWXhNa1J2YlhsUFUyMWljMlZNWlRocVgyUlFiMUpuWlRJMlRrRlJTMWcyWjBnd2FERlJValIzU1VwV1JXbFFOMVF3U1VwdFlVMVpiRmRzYlU4eFlrSlViRzVtUmtRMlltZFdMVmxKWW5sc1QxOTFNSFJuWkdOZlFuVm5aRE5UWnpneVkweHhRalZxTFhsSU1GZGlXazQyTVMxcmFFUllVbEkwZDFadE5XNVlTMUZYWlVoeFJFNXFSV1pZWm1WU2EyTkdkbUYwUW13ME1VRjNNVEpUTlZKUVNtWTBTbGwxWldOSFkzWm9hemRpVVdOd2JrWjJVMkV4TjBoWVgzWlhlbDlOVDFCclpGVjNla2cwTUdWWlNqSmtUMkp3UW1aaWJGTkZVMmh5TkdvMWVGZHpVRnBIVGpGbVZGWXpPVmw1ZUhOcGRUTmZhbmxaVlZsYVNEWkhjbVZJWW5BNWIxRjVMV0pDV25GUlZURmlXVm8wVFE9PSIsImVtYWlsIjoicHN0cmlja0ByZWRoYXQuY29tIn19fQ==
+        type: kubernetes.io/dockerconfigjson
+
+  - name: Create public key
+    kubernetes.core.k8s:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
+      state: present
+      validate_certs: false
+      definition:
+        kind: Secret
+        metadata:
+          name: sshkey-cluster-{{ vm_name }}
+          namespace: "{{ vm_name }}"
+        stringData:
+          id_rsa.pub: "{{ public_key }}"
+
+  - name: Create Node Pool
+    kubernetes.core.k8s:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
+      state: present
+      api_version: hypershift.openshift.io/v1alpha1
+      validate_certs: false
+      definition:
+        kind: NodePool
+        metadata:
+          name: nodepool-{{ vm_name }}-1
+          namespace: "{{ vm_name }}"
+        spec:
+          clusterName: "{{ vm_name }}"
+          replicas: 1
+          management:
+            autoRepair: false
+            upgradeType: InPlace
+          platform:
+            type: Agent
+            agent:
+              agentLabelSelector:
+                matchLabels: {}
+          release:
+            image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+
+  - name: Create Managed Cluster
+    kubernetes.core.k8s:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
+      state: present
+      api_version: cluster.open-cluster-management.io/v1
+      validate_certs: false
+      definition:
+        kind: ManagedCluster
+        metadata:
+          labels:
+            cloud: hypershift
+            name: "{{ vm_name }}"
+            cluster.open-cluster-management.io/clusterset: 'default'
+          name: "{{ vm_name }}"
+        spec:
+        hubAcceptsClient: true
+
+  - name: Create KlusterLetAddonConfig
+    kubernetes.core.k8s:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
+      state: present
+      api_version: agent.open-cluster-management.io/v1
+      validate_certs: false
+      definition:
+        kind: KlusterletAddonConfig
+        metadata:
+          name: "{{ vm_name }}"
+          namespace: "{{ vm_name }}"
+        spec:
+          clusterName: "{{ vm_name }}"
+          clusterNamespace: "{{ vm_name }}"
+          clusterLabels:
+            cloud: ai-hypershift
+          applicationManager:
+            enabled: true
+          policyController:
+            enabled: true
+          searchCollector:
+            enabled: true
+          certPolicyController:
+            enabled: true
+          iamPolicyController:
+            enabled: true
+
 
   always:
     - name: If login succeeded, try to log out (revoke access token)
