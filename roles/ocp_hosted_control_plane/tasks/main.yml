@@ -16,8 +16,22 @@
       host: "{{ openshift_fqdn }}"
       api_version: agent-install.openshift.io/v1beta1
       kind: Agent
-      field_selectors:
-        - spec.hostname==hosted1-vm5
+      validate_certs: false
+    register: output
+
+  - name: Update Agent
+    kubernetes.core.k8s:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
+      state: present
+      definition:
+        api_version: agent-install.openshift.io/v1beta1
+        kind: Agent
+        metadata:
+          name: 617c7f95-70ab-4d91-bb6e-f9954d7fcb7f
+        spec:
+          approved: true
+          hostname: "hosted2"
       validate_certs: false
     register: output
 
