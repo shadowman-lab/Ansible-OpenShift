@@ -174,7 +174,7 @@
             cluster.open-cluster-management.io/clusterset: 'default'
           name: "{{ vm_name }}"
         spec:
-        hubAcceptsClient: true
+          hubAcceptsClient: true
 
   - name: Create KlusterLetAddonConfig
     kubernetes.core.k8s:
@@ -203,7 +203,6 @@
             enabled: true
           iamPolicyController:
             enabled: true
-
 
   always:
     - name: If login succeeded, try to log out (revoke access token)
