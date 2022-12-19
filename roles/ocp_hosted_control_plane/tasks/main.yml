@@ -166,6 +166,7 @@
       state: present
       api_version: cluster.open-cluster-management.io/v1
       validate_certs: false
+      apply: true
       definition:
         kind: ManagedCluster
         metadata:
