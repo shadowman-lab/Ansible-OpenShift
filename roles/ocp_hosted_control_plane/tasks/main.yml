@@ -46,7 +46,10 @@
 
   - name: Create a k8s namespace
     kubernetes.core.k8s:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
       name: "{{ vm_name }}"
+      validate_certs: false
       api_version: v1
       kind: Namespace
       state: present
