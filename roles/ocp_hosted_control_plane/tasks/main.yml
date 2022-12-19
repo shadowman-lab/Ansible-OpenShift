@@ -217,8 +217,10 @@
     register: ipaddr
 
   - name: Set IP Address
-    ansible.builtin.set_fact:
-      apiip: "{{ ipaddr.resources[0].status.loadBalancer.ingress[0].ip }}"
+    ansible.builtin.set_stats:
+      data:
+        apiip: "{{ ipaddr.resources[0].status.loadBalancer.ingress[0].ip }}"
+      per_host: false
 
   always:
     - name: If login succeeded, try to log out (revoke access token)
