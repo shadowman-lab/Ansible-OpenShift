@@ -16,6 +16,8 @@
       host: "{{ openshift_fqdn }}"
       api_version: agent-install.openshift.io/v1beta1
       kind: Agent
+      field_selectors:
+        - spec.approved=false
       validate_certs: false
     register: output
 
