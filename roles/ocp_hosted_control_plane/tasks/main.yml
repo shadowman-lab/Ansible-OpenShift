@@ -58,6 +58,7 @@
     kubernetes.core.k8s:
       api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
       host: "{{ openshift_fqdn }}"
+      apply: true
       state: present
       validate_certs: false
       api_version: hypershift.openshift.io/v1alpha1
