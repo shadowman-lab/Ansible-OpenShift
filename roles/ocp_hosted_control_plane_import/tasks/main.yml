@@ -32,9 +32,7 @@
     kubernetes.core.k8s:
       api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
       host: "{{ openshift_fqdn }}"
-      definition: 
-        - "{{ crds | from_yaml }}"
-        - "{{ hostimport | from_yaml }}"
+      definition: "{{ crds | from_yaml }}"
       validate_certs: false
 
   always:
