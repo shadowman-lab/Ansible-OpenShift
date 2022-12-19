@@ -14,6 +14,7 @@
     kubernetes.core.k8s_cluster_info:
       api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
       host: "{{ openshift_fqdn }}"
+      validate_certs: false
     register: api_status
 
   - name: Get new information
@@ -21,6 +22,7 @@
       api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
       host: "{{ openshift_fqdn }}"
       kind: ManagedCluster
+      validate_certs: false
     register: output
 
   always:
