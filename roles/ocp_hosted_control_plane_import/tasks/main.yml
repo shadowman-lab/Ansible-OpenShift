@@ -23,7 +23,7 @@
     ansible.builtin.set_fact:
       crds: "{{ item..data['crds.yaml'] | b64decode }}"
       import: "{{ item..data['import.yaml'] | b64decode }}"
-    when: item.metadata.name == {{ vm_name }}-import
+    when: item.metadata.name == "{{ vm_name }}-import"
     loop: "{{ output.resources }}"
     loop_control:
       label: "{{ item.metadata.name }}"
