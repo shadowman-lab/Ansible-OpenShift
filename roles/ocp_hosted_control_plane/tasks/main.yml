@@ -25,6 +25,7 @@
       host: "{{ openshift_fqdn }}"
       api_version: agent-install.openshift.io/v1beta1
       kind: InfraEnv
+      name: shadowman-lab
       validate_certs: false
     register: output
 
