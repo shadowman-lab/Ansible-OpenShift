@@ -17,7 +17,7 @@
       api_version: agent-install.openshift.io/v1beta1
       kind: Agent
       field_selectors:
-        - spec.approved eq false
+        - spec.hostname=hosted1-vm5
       validate_certs: false
     register: output
 
