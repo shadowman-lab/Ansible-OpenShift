@@ -64,44 +64,44 @@
       definition:
         kind: HostedCluster
         metadata:
-        name: "{{ vm_name }}"
-        namespace: "{{ vm_name }}"
-        labels:
-          "cluster.open-cluster-management.io/clusterset": 'default'
+          name: "{{ vm_name }}"
+          namespace: "{{ vm_name }}"
+          labels:
+            "cluster.open-cluster-management.io/clusterset": 'default'
         spec:
-        release:
-          image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
-        pullSecret:
-          name: pullsecret-cluster-{{ vm_name }}
-        sshKey:
-          name: sshkey-cluster-{{ vm_name }}
-        networking:
-          podCIDR: 10.132.0.0/14
-          serviceCIDR: 172.31.0.0/16
-          machineCIDR: 172.16.2.0/24
-        platform:
-          type: Agent
-          agent:
-            agentNamespace: 'shadowman-lab'
-        infraID: "{{ vm_name }}"
-        dns:
-          baseDomain: 'apps.hypershift.shadowman.dev'
-        services:
-        - service: APIServer
-          servicePublishingStrategy:
-            type: LoadBalancer
-        - service: OAuthServer
-          servicePublishingStrategy:
-            type: Route
-        - service: OIDC
-          servicePublishingStrategy:
-            type: Route
-        - service: Konnectivity
-          servicePublishingStrategy:
-            type: Route
-        - service: Ignition
-          servicePublishingStrategy:
-            type: Route
+          release:
+            image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+          pullSecret:
+            name: pullsecret-cluster-{{ vm_name }}
+          sshKey:
+            name: sshkey-cluster-{{ vm_name }}
+          networking:
+            podCIDR: 10.132.0.0/14
+            serviceCIDR: 172.31.0.0/16
+            machineCIDR: 172.16.2.0/24
+          platform:
+            type: Agent
+            agent:
+              agentNamespace: 'shadowman-lab'
+          infraID: "{{ vm_name }}"
+          dns:
+            baseDomain: 'apps.hypershift.shadowman.dev'
+          services:
+          - service: APIServer
+            servicePublishingStrategy:
+              type: LoadBalancer
+          - service: OAuthServer
+            servicePublishingStrategy:
+              type: Route
+          - service: OIDC
+            servicePublishingStrategy:
+              type: Route
+          - service: Konnectivity
+            servicePublishingStrategy:
+              type: Route
+          - service: Ignition
+            servicePublishingStrategy:
+              type: Route
 
   - name: Create pull secret
     kubernetes.core.k8s:
