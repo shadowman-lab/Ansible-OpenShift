@@ -19,6 +19,15 @@
       validate_certs: false
     register: output
 
+  - name: Get BareMetalHost
+    kubernetes.core.k8s_info:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
+      api_version: metal3.io/v1alpha1
+      kind: BareMetalHost
+      validate_certs: false
+    register: output
+
   - name: Get KlusterletAddonConfig
     kubernetes.core.k8s_info:
       api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
