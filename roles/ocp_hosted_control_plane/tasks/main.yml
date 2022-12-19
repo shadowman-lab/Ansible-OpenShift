@@ -215,6 +215,9 @@
         - app = kube-apiserver
       validate_certs: false
     register: ipaddr
+    until: ipaddr.resources[0] is defined
+    retries: 60
+    delay: 10
 
   - name: Set IP Address
     ansible.builtin.set_stats:
