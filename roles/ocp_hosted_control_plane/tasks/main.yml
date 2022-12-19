@@ -17,7 +17,7 @@
       api_version: agent-install.openshift.io/v1beta1
       kind: Agent
       field_selectors:
-        - status.debugInfo.state = insufficient-unbound
+        - status.debugInfo.state=insufficient-unbound
       validate_certs: false
     register: output
 
