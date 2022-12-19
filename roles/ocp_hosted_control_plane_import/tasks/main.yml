@@ -28,6 +28,15 @@
     loop_control:
       label: "{{ item.metadata.name }}"
 
+  - name: Import
+    kubernetes.core.k8s:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
+      definition: 
+        - "{{ crds | from_yaml }}"
+        - "{{ hostimport | from_yaml }}"
+      validate_certs: false
+
   always:
     - name: If login succeeded, try to log out (revoke access token)
       redhat.openshift.openshift_auth:
