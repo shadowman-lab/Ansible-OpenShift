@@ -1,5 +1,5 @@
 ---
-- name: OpenShift hosted control plane setup
+- name: OpenShift hosted control plane import
   hosts: localhost
   gather_facts: false
 

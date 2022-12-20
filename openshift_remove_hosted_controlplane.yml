@@ -1,0 +1,7 @@
+---
+- name: OpenShift remove hosted control plane
+  hosts: localhost
+  gather_facts: false
+
+  roles:
+    - remove_ocp_hosted_control_plane
