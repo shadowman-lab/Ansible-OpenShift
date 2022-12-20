@@ -21,7 +21,7 @@
 
   - name: Set host import information
     ansible.builtin.set_fact:
-      hostimport: "{{ item.data['import.yaml'] | b64decode }}"
+      hostimport: "{{ item.data['import.yaml'] }}"
     when: item.metadata.name == "{{ vm_name }}-import"
     loop: "{{ output.resources }}"
     loop_control:
@@ -56,8 +56,6 @@
       api_key: "{{ openshiftnew_auth_results.openshift_auth.api_key }}"
       host: "https://{{ apiip }}:6443"
       definition: "{{ hostimport }}"
-      continue_on_error: true
-      force: true
       validate_certs: false
 
   - name: If login succeeded, try to log out (revoke access token)
