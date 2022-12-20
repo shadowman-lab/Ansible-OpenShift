@@ -16,11 +16,10 @@
       host: "{{ openshift_fqdn }}"
       kind: Secret
       namespace: "{{ vm_name }}"
+      name: hosted7-kubeadmin-password
       validate_certs: false
     register: output
-    until: output | json_query('output.resources[*].metadata.name') == hosted7-kubeadmin-password
-    retries: 60
-    delay: 10
+    
 
   - name: Set host import information
     ansible.builtin.set_fact:
