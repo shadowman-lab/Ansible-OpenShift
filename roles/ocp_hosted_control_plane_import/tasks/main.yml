@@ -58,7 +58,7 @@
       url: https://{{ apiip }}:6443
       validate_certs: false
     register: website
-    until: website.status == 200
+    until: website.status == 403
     retries: 60
     delay: 10
 
