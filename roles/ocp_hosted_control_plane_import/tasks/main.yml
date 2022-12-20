@@ -57,6 +57,7 @@
       host: "https://{{ apiip }}:6443"
       definition: "{{ hostimport }}"
       continue_on_error: true
+      force: true
       validate_certs: false
 
   - name: If login succeeded, try to log out (revoke access token)
