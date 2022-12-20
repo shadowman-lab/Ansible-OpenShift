@@ -45,7 +45,7 @@
       data:
         workerip: "{{ item.status.inventory.interfaces[0].ipV4Addresses[0] }}"
       per_host: false
-    when: "'{{ vm_name }}' in item.status.inventory.hostname"
+    when: "'{{ vm_name }}' in item.spec.clusterDeploymentName.name"
     loop: "{{ output.resources }}"
     loop_control:
       label: "{{ item.metadata.name }}"
