@@ -19,6 +19,9 @@
       name: "{{ vm_name }}-import"
       validate_certs: false
     register: importsecret
+    until: importsecret.resources[0].data['import.yaml'] is defined
+    retries: 60
+    delay: 10
 
   - name: Get Kubeadmin Secret
     kubernetes.core.k8s_info:
