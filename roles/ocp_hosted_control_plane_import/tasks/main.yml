@@ -18,6 +18,9 @@
       namespace: "{{ vm_name }}"
       validate_certs: false
     register: output
+    until: output.resources contains "kubeadmin-password"
+    retries: 60
+    delay: 10
 
   - name: Set host import information
     ansible.builtin.set_fact:
@@ -66,19 +69,19 @@
       definition: "{{ hostimport }}"
       validate_certs: false
 
-  - name: If login succeeded, try to log out (revoke access token)
-    redhat.openshift.openshift_auth:
-      state: absent
-      host: "https://{{ apiip }}:6443"
-      api_key: "{{ openshiftnew_auth_results.openshift_auth.api_key }}"
-      validate_certs: false
-    when: openshiftnew_auth_results.openshift_auth.api_key is defined
-
   always:
-    - name: If login succeeded, try to log out (revoke access token)
+    - name: If login succeeded, try to log out of main cluster
       redhat.openshift.openshift_auth:
         state: absent
         host: "{{ openshift_fqdn }}"
         api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
         validate_certs: false
       when: openshift_auth_results.openshift_auth.api_key is defined
+
+    - name: If login succeeded, try to log out of new cluster
+      redhat.openshift.openshift_auth:
+        state: absent
+        host: "https://{{ apiip }}:6443"
+        api_key: "{{ openshiftnew_auth_results.openshift_auth.api_key }}"
+        validate_certs: false
+      when: openshiftnew_auth_results.openshift_auth.api_key is defined
