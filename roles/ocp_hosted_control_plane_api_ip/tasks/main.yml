@@ -40,10 +40,10 @@
       validate_certs: false
     register: output
 
-  - name: Set ip
+  - name: Set worker ip
     ansible.builtin.set_stats:
       data:
-        workerip: "{{ item.status.inventory.interfaces[0].ipV4Addresses[0] }}"
+        workerip: "{{ item.status.inventory.interfaces[0].ipV4Addresses[0].split('/')[0] }}"
       per_host: false
     when: "'{{ vm_name }}' in item.spec.clusterDeploymentName.name"
     loop: "{{ output.resources }}"
