@@ -45,7 +45,7 @@
 
   - name: Login to new cluster
     redhat.openshift.openshift_auth:
-      host: "http://{{ apiip }}:6443"
+      host: "https://{{ apiip }}:6443"
       username: "kubeadmin"
       password: "{{ kubeadminpassword }}"
       validate_certs: false
@@ -54,7 +54,7 @@
   - name: Import
     kubernetes.core.k8s:
       api_key: "{{ openshiftnew_auth_results.openshift_auth.api_key }}"
-      host: "http://{{ apiip }}:6443"
+      host: "https://{{ apiip }}:6443"
       definition: "{{ hostimport }}"
       apply: true
       validate_certs: false
