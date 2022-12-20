@@ -22,7 +22,7 @@
   - name: Set host import information
     ansible.builtin.set_fact:
       hostimport: "{{ item.data['import.yaml'] | b64decode }}"
-      creds: "{{ item.data['creds.yaml'] | b64decode }}"
+      creds: "{{ item.data['crds.yaml'] | b64decode }}"
     when: item.metadata.name == "{{ vm_name }}-import"
     loop: "{{ output.resources }}"
     loop_control:
