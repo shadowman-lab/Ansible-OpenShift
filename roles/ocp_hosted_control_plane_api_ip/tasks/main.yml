@@ -45,7 +45,7 @@
       data:
         workerip: "{{ item.status.inventory.interfaces[0].ipV4Addresses[0] }}"
       per_host: false
-    when: item.status.inventory.hostname == {{ vm_name }}
+    when: "item.status.inventory.hostname == {{ vm_name }}"
     loop: "{{ output.resources }}"
     loop_control:
       label: "{{ item.metadata.name }}"
