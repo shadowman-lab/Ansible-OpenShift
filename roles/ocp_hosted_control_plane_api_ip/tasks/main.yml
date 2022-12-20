@@ -31,25 +31,24 @@
         apiip: "{{ ipaddr.resources[0].status.loadBalancer.ingress[0].ip }}"
       per_host: false
 
-  - name: Get IP Address
+  - name: Get Agents
     kubernetes.core.k8s_info:
       api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
       host: "{{ openshift_fqdn }}"
-      api_version: v1
-      kind: Node
-      namespace: "{{ vm_name }}-{{ vm_name }}"
-      name: "{{ vm_name }}"
+      api_version: agent-install.openshift.io/v1beta1
+      kind: Agent
       validate_certs: false
-    register: workaddr
-    until: workaddr.resources[0].status.addresses[0].address is defined
-    retries: 60
-    delay: 10
+    register: output
 
-  - name: Set IP Address
+  - name: Set ip
     ansible.builtin.set_stats:
       data:
-        workerip: "{{ workaddr.resources[0].status.addresses[0].address }}"
+        workerip: "{{ item.status.inventory.interfaces[0].ipV4Addresses[0] }}"
       per_host: false
+    when: item.status.inventory.hostname == {{ vm_name }}
+    loop: "{{ output.resources }}"
+    loop_control:
+      label: "{{ item.metadata.name }}"
 
   always:
     - name: If login succeeded, try to log out (revoke access token)
