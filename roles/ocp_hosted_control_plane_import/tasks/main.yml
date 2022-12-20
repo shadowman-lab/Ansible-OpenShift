@@ -57,6 +57,7 @@
     ansible.builtin.uri:
       url: https://{{ apiip }}:6443
       validate_certs: false
+      status_code: 403
     register: website
     until: website.status == 403
     retries: 60
