@@ -53,7 +53,7 @@
       validate_certs: false
     when: openshift_auth_results.openshift_auth.api_key is defined
 
-  - name: Check that you can connect to the index page and that the hostname is in the contents
+  - name: Check that you can connect to the API page
     ansible.builtin.uri:
       url: https://{{ apiip }}:6443
       validate_certs: false
@@ -62,6 +62,10 @@
     until: website.status == 403
     retries: 60
     delay: 10
+
+  - name: Pause 60 seconds
+    ansible.builtin.wait_for:
+      timeout: 60
 
   - name: Login to new cluster
     redhat.openshift.openshift_auth:
