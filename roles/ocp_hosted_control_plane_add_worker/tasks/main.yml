@@ -55,13 +55,13 @@
 
   - name: Set replica number
     ansible.builtin.set_fact:
-      replicanumber: "{{ item.spec.replicas | int + 1 }}"
+      replicanumber: "{{ item.spec.replicas }}"
     when: item.spec.clusterName == "{{ cluster_name }}"
     loop: "{{ nodepool.resources }}"
     loop_control:
       label: "{{ item.spec.clusterName }}"
 
-  - name: Update Node Pool
+  - name: Update Node Pool to 2
     kubernetes.core.k8s:
       api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
       host: "{{ openshift_fqdn }}"
@@ -75,7 +75,7 @@
           namespace: "{{ cluster_name }}"
         spec:
           clusterName: "{{ cluster_name }}"
-          replicas: "{{ replicanumber | int }}"
+          replicas: 2
           management:
             autoRepair: false
             upgradeType: InPlace
@@ -86,6 +86,61 @@
                 matchLabels: {}
           release:
             image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+    when: replicanumber | int == 1
+
+  - name: Update Node Pool to 3
+    kubernetes.core.k8s:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
+      state: present
+      api_version: hypershift.openshift.io/v1alpha1
+      validate_certs: false
+      definition:
+        kind: NodePool
+        metadata:
+          name: nodepool-{{ cluster_name }}-1
+          namespace: "{{ cluster_name }}"
+        spec:
+          clusterName: "{{ cluster_name }}"
+          replicas: 3
+          management:
+            autoRepair: false
+            upgradeType: InPlace
+          platform:
+            type: Agent
+            agent:
+              agentLabelSelector:
+                matchLabels: {}
+          release:
+            image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+    when: replicanumber | int == 2
+
+  - name: Update Node Pool to 4
+    kubernetes.core.k8s:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
+      state: present
+      api_version: hypershift.openshift.io/v1alpha1
+      validate_certs: false
+      definition:
+        kind: NodePool
+        metadata:
+          name: nodepool-{{ cluster_name }}-1
+          namespace: "{{ cluster_name }}"
+        spec:
+          clusterName: "{{ cluster_name }}"
+          replicas: 4
+          management:
+            autoRepair: false
+            upgradeType: InPlace
+          platform:
+            type: Agent
+            agent:
+              agentLabelSelector:
+                matchLabels: {}
+          release:
+            image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+    when: replicanumber | int == 3
 
   always:
     - name: If login succeeded, try to log out (revoke access token)

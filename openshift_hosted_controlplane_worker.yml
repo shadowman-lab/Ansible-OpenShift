@@ -3,8 +3,5 @@
   hosts: localhost
   gather_facts: false
 
-  environment:
-    ANSIBLE_JINJA2_NATIVE: true
-
   roles:
     - ocp_hosted_control_plane_add_worker
