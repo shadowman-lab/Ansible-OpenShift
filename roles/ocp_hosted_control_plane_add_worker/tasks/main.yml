@@ -75,7 +75,7 @@
           namespace: "{{ cluster_name }}"
         spec:
           clusterName: "{{ cluster_name }}"
-          replicas: '{{ replicanumber | int }}'
+          replicas: "{{ replicanumber | int }}"
           management:
             autoRepair: false
             upgradeType: InPlace
@@ -86,8 +86,6 @@
                 matchLabels: {}
           release:
             image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
-    environment: 
-      ANSIBLE_JINJA2_NATIVE: true
 
   always:
     - name: If login succeeded, try to log out (revoke access token)
