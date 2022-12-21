@@ -1,7 +1,0 @@
----
-- name: OpenShift hosted control plane get api ip
-  hosts: localhost
-  gather_facts: false
-
-  roles:
-    - ocp_hosted_control_plane_api_ip
