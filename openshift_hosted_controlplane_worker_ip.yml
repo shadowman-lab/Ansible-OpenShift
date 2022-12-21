@@ -1,5 +1,5 @@
 ---
-- name: OpenShift hosted control plane get worker ip
+- name: OpenShift hosted control plane get api ip
   hosts: localhost
   gather_facts: false
 
