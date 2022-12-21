@@ -41,7 +41,7 @@
           namespace: "{{ cluster_name }}"
         spec:
           clusterName: "{{ cluster_name }}"
-          replicas: "{{ replicanumber | int }}"
+          replicas: "{{ replicanumber | int64 }}"
           management:
             autoRepair: false
             upgradeType: InPlace
