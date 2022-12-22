@@ -21,24 +21,24 @@
 
   - name: Set replica number
     ansible.builtin.set_fact:
-      clusterID: "{{ item.spec.clusterID }}"
+      ocpclusterID: "{{ item.spec.clusterID }}"
     when: item.metadata.name == "{{ vm_name }}"
     loop: "{{ hostedcluster.resources }}"
     loop_control:
       label: "{{ item.metadata.name }}"
 
   - name: Login to OCM
-    command: ocm login --token='{{ acm_api_token }}'
+    ansible.builtin.command: ocm login --token='{{ acm_api_token }}'
     delegate_to: ansibledev.shadowman.dev
 
   - name: Get token
-    command: ocm token
+    ansible.builtin.command: ocm token
     delegate_to: ansibledev.shadowman.dev
     register: token
 
   - name: Get subscription from api.openshift
     ansible.builtin.uri:
-      url: 'https://api.openshift.com/api/accounts_mgmt/v1/subscriptions?search=external_cluster_id%20%3D%20%27{{ clusterID }}%27'
+      url: 'https://api.openshift.com/api/accounts_mgmt/v1/subscriptions?search=external_cluster_id%20%3D%20%27{{ ocpclusterID }}%27'
       method: GET
       headers:
         Content-Type: application/json
