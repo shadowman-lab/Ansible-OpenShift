@@ -89,6 +89,10 @@
       definition: "{{ hostimport }}"
       validate_certs: false
 
+  - name: Display kubeadmin password
+    ansible.builtin.debug:
+      msg: "{{ kubeadminpassword }}"
+
   always:
     - name: If login succeeded, try to log out of main cluster
       redhat.openshift.openshift_auth:
