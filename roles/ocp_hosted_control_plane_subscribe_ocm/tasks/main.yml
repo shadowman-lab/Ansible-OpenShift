@@ -21,7 +21,7 @@
 
   - name: Set replica number
     ansible.builtin.set_fact:
-      ocpclusterID: "{{ item.spec.clusterID }}"
+      ocpcluster: "{{ item.spec.clusterID }}"
     when: item.metadata.name == "{{ vm_name }}"
     loop: "{{ hostedcluster.resources }}"
     loop_control:
@@ -38,7 +38,7 @@
 
   - name: Get subscription from api.openshift
     ansible.builtin.uri:
-      url: 'https://api.openshift.com/api/accounts_mgmt/v1/subscriptions?search=external_cluster_id%20%3D%20%27{{ ocpclusterID }}%27'
+      url: 'https://api.openshift.com/api/accounts_mgmt/v1/subscriptions?search=external_cluster_id%20%3D%20%27{{ ocpcluster }}%27'
       method: GET
       headers:
         Content-Type: application/json
