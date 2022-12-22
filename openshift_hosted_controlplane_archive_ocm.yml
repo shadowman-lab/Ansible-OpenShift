@@ -1,0 +1,7 @@
+---
+- name: OpenShift hosted control plane archive in OCM
+  hosts: localhost
+  gather_facts: false
+
+  roles:
+    - ocp_hosted_control_plane_archive_ocm

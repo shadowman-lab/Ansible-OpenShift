@@ -1,0 +1,74 @@
+---
+- name: OCP Block
+  block:
+
+  - name: Login to OpenShift
+    redhat.openshift.openshift_auth:
+      host: "{{ openshift_fqdn }}"
+      username: "{{ openshift_user }}"
+      password: "{{ openshift_password }}"
+      validate_certs: false
+    register: openshift_auth_results
+
+  - name: Get Hosted Clusters
+    kubernetes.core.k8s_info:
+      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+      host: "{{ openshift_fqdn }}"
+      api_version: hypershift.openshift.io/v1alpha1
+      kind: HostedCluster
+      validate_certs: false
+    register: hostedcluster
+
+  - name: Set replica number
+    ansible.builtin.set_fact:
+      clusterID: "{{ item.spec.clusterID }}"
+    when: item.metadata.name == "{{ vm_name }}"
+    loop: "{{ hostedcluster.resources }}"
+    loop_control:
+      label: "{{ item.metadata.name }}"
+
+  - name: Login to OCM
+    command: ocm login --token='{{ acm_api_token }}'
+    delegate_to: ansibledev.shadowman.dev
+
+  - name: Get token
+    command: ocm token
+    delegate_to: ansibledev.shadowman.dev
+    register: token
+
+  - name: Get subscription from api.openshift
+    ansible.builtin.uri:
+      url: 'https://api.openshift.com/api/accounts_mgmt/v1/subscriptions?search=external_cluster_id%20%3D%20%27{{ clusterID }}%27'
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: Bearer {{ token.stdout }}
+    register: results
+
+  - name: Set id
+    ansible.builtin.set_fact:
+      subid: "{{ results.json['items'][0]['id'] }}"
+
+  - name: Update subscription information
+    ansible.builtin.uri:
+      url: 'https://api.openshift.com/api/accounts_mgmt/v1/subscriptions/{{ subid }}'
+      method: PATCH
+      body_format: json
+      body: 
+        display_name: "{{ vm_name }}"
+        service_level: "L1-L3"
+        support_level: "Standard"
+        system_units: "Cores/vCPU"
+        usage: "Production"
+      headers:
+        Content-Type: application/json
+        Authorization: Bearer {{ token.stdout }}
+
+  always:
+    - name: If login succeeded, try to log out (revoke access token)
+      redhat.openshift.openshift_auth:
+        state: absent
+        host: "{{ openshift_fqdn }}"
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        validate_certs: false
+      when: openshift_auth_results.openshift_auth.api_key is defined
