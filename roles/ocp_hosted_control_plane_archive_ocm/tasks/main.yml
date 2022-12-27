@@ -28,7 +28,7 @@
       label: "{{ item.metadata.name }}"
 
   - name: Login to OCM
-    ansible.builtin.command: ocm login --token='{{ acm_api_token | b64encode }}'
+    ansible.builtin.command: ocm login --token='{{ acm_api_token }}'
     delegate_to: ansibledev.shadowman.dev
 
   - name: Get token
