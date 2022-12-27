@@ -19,9 +19,11 @@
       namespace: "{{ vm_name }}"
       validate_certs: false
     register: NodePool
-    until: NodePool.resources[0].status.conditions[-1].type == "Ready"
+    until: 
+      - NodePool.resources[0].status.conditions[-1].type == "Ready"
+      - NodePool.resources[0].status.conditions[-1].status == "True"
     delay: 10
-    retries: 120
+    retries: 240
 
   - name: Get Import Secrets
     kubernetes.core.k8s_info:
