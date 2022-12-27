@@ -44,24 +44,24 @@
         Content-Type: application/json
         Authorization: Bearer {{ token.stdout }}
     register: results
+    until: results.json['items'][0]['id'] is defined
+    delay: 10
+    retries: 60
 
-  - name: Block for working ID
-    when: results.json['items'][0]['id'] is defined
-    block:
-      - name: Set id
-        ansible.builtin.set_fact:
-          subid: "{{ results.json['items'][0]['id'] }}"
+  - name: Set id
+    ansible.builtin.set_fact:
+      subid: "{{ results.json['items'][0]['id'] }}"
 
-      - name: Update subscription information
-        ansible.builtin.uri:
-          url: 'https://api.openshift.com/api/accounts_mgmt/v1/subscriptions/{{ subid }}'
-          method: PATCH
-          body_format: json
-          body: 
-            status: "Archived"
-          headers:
-            Content-Type: application/json
-            Authorization: Bearer {{ token.stdout }}
+  - name: Update subscription information
+    ansible.builtin.uri:
+      url: 'https://api.openshift.com/api/accounts_mgmt/v1/subscriptions/{{ subid }}'
+      method: PATCH
+      body_format: json
+      body: 
+        status: "Archived"
+      headers:
+        Content-Type: application/json
+        Authorization: Bearer {{ token.stdout }}
 
   always:
     - name: If login succeeded, try to log out (revoke access token)
