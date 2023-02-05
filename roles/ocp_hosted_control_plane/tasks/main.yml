@@ -70,7 +70,7 @@
             "cluster.open-cluster-management.io/clusterset": 'default'
         spec:
           release:
-            image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+            image: quay.io/openshift-release-dev/ocp-release:{{ version }}-x86_64
           pullSecret:
             name: pullsecret-cluster-{{ vm_name }}
           sshKey:
@@ -156,7 +156,7 @@
               agentLabelSelector:
                 matchLabels: {}
           release:
-            image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+            image: quay.io/openshift-release-dev/ocp-release:{{ version }}-x86_64
 
   - name: Create Managed Cluster
     kubernetes.core.k8s:

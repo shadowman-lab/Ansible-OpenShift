@@ -85,7 +85,7 @@
               agentLabelSelector:
                 matchLabels: {}
           release:
-            image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+            image: quay.io/openshift-release-dev/ocp-release:{{ version }}-x86_64
     when: replicanumber | int == 1
 
   - name: Update Node Pool to 3
@@ -112,7 +112,7 @@
               agentLabelSelector:
                 matchLabels: {}
           release:
-            image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+            image: quay.io/openshift-release-dev/ocp-release:{{ version }}-x86_64
     when: replicanumber | int == 2
 
   - name: Update Node Pool to 4
@@ -139,7 +139,7 @@
               agentLabelSelector:
                 matchLabels: {}
           release:
-            image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+            image: quay.io/openshift-release-dev/ocp-release:{{ version }}-x86_64
     when: replicanumber | int == 3
 
   always:
