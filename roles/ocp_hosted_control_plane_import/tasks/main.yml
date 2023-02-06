@@ -18,10 +18,10 @@
       kind: NodePool
       namespace: "{{ vm_name }}"
       validate_certs: false
-    register: NodePoolStatus
+    register: nodepoolstatus
     until:
-      - NodePoolStatus.resources[0].status.conditions[-1].type == "Ready"
-      - NodePoolStatus.resources[0].status.conditions[-1].status == "True"
+      - nodepoolstatus.resources[0].status.conditions[-1].type == "Ready"
+      - nodepoolstatus.resources[0].status.conditions[-1].status == "True"
     delay: 10
     retries: 240
 
