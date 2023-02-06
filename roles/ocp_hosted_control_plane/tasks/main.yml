@@ -36,7 +36,7 @@
       definition:
         kind: Agent
         metadata:
-          name: "{{ unapproved_host }}" 
+          name: "{{ unapproved_host }}"
           namespace: shadowman-lab
         spec:
           approved: true

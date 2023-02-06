@@ -54,7 +54,7 @@
       url: 'https://api.openshift.com/api/accounts_mgmt/v1/subscriptions/{{ subid }}'
       method: PATCH
       body_format: json
-      body: 
+      body:
         display_name: "{{ vm_name }}"
         service_level: "L1-L3"
         support_level: "Standard"

@@ -134,7 +134,7 @@
       definition:
         kind: Agent
         metadata:
-          name: "{{ agenthostname }}" 
+          name: "{{ agenthostname }}"
           namespace: shadowman-lab
       validate_certs: false
     when: agenthostname is defined

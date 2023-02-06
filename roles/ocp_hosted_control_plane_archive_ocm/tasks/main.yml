@@ -57,7 +57,7 @@
       url: 'https://api.openshift.com/api/accounts_mgmt/v1/subscriptions/{{ subid }}'
       method: PATCH
       body_format: json
-      body: 
+      body:
         status: "Archived"
       headers:
         Content-Type: application/json

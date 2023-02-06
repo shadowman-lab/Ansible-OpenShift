@@ -18,10 +18,10 @@
       kind: NodePool
       namespace: "{{ vm_name }}"
       validate_certs: false
-    register: NodePool
-    until: 
-      - NodePool.resources[0].status.conditions[-1].type == "Ready"
-      - NodePool.resources[0].status.conditions[-1].status == "True"
+    register: NodePoolStatus
+    until:
+      - NodePoolStatus.resources[0].status.conditions[-1].type == "Ready"
+      - NodePoolStatus.resources[0].status.conditions[-1].status == "True"
     delay: 10
     retries: 240
 
@@ -58,7 +58,7 @@
 
   - name: Set kubeadminpassword
     ansible.builtin.set_fact:
-      kubeadminpassword: "{{ kubeadmin.resources[0].data.password | b64decode }}"      
+      kubeadminpassword: "{{ kubeadmin.resources[0].data.password | b64decode }}"
 
   - name: Logout of main cluster
     redhat.openshift.openshift_auth:

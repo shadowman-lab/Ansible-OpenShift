@@ -117,7 +117,7 @@
       definition:
         kind: Agent
         metadata:
-          name: "{{ agenthostname }}" 
+          name: "{{ agenthostname }}"
           namespace: shadowman-lab
       validate_certs: false
     when: agenthostname is defined
@@ -131,7 +131,7 @@
       api_version: v1
       kind: Namespace
       state: absent
-        
+
   always:
     - name: If login succeeded, try to log out (revoke access token)
       redhat.openshift.openshift_auth:
