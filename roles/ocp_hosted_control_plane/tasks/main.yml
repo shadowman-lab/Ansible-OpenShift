@@ -27,7 +27,7 @@
     loop_control:
       label: "{{ item.metadata.name }}"
 
-  - name: Update Host to correct hostname and approved
+  - name: Update Host to approved
     kubernetes.core.k8s:
       api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
       host: "{{ openshift_fqdn }}"
@@ -40,7 +40,6 @@
           namespace: shadowman-lab
         spec:
           approved: true
-          hostname: "{{ vm_name }}"
       validate_certs: false
     when: unapproved_host is defined
 
@@ -168,10 +167,14 @@
       definition:
         kind: ManagedCluster
         metadata:
+          annotations:
+            import.open-cluster-management.io/hosting-cluster-name: local-cluster 
+            import.open-cluster-management.io/klusterlet-deploy-mode: Hosted
+            open-cluster-management/created-via: other
           labels:
-            cloud: hypershift
+            cloud: BareMetal
+            vendor: OpenShift
             name: "{{ vm_name }}"
-            cluster.open-cluster-management.io/clusterset: 'default'
           name: "{{ vm_name }}"
         spec:
           hubAcceptsClient: true
@@ -192,7 +195,8 @@
           clusterName: "{{ vm_name }}"
           clusterNamespace: "{{ vm_name }}"
           clusterLabels:
-            cloud: ai-hypershift
+            cloud: BareMetal
+            vendor: OpenShift
           applicationManager:
             enabled: true
           policyController:
