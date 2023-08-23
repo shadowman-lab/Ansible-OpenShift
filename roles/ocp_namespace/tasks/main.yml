@@ -15,7 +15,7 @@
       host: "{{ openshift_fqdn }}"
       kind: Namespace
       state: "{{ state }}"
-      name: "{{ namespace }}"
+      name: "{{ ocp_namespace }}"
       validate_certs: false
 
   always:
