@@ -2,107 +2,107 @@
 - name: OCP Block
   block:
 
-  - name: Login to OpenShift
-    redhat.openshift.openshift_auth:
-      host: "{{ openshift_fqdn }}"
-      username: "{{ openshift_user }}"
-      password: "{{ openshift_password }}"
-      validate_certs: false
-    register: openshift_auth_results
+    - name: Login to OpenShift
+      redhat.openshift.openshift_auth:
+        host: "{{ openshift_fqdn }}"
+        username: "{{ openshift_user }}"
+        password: "{{ openshift_password }}"
+        validate_certs: false
+      register: openshift_auth_results
 
-  - name: Wait until Node Pool is ready
-    kubernetes.core.k8s_info:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      api_version: hypershift.openshift.io/v1alpha1
-      kind: NodePool
-      namespace: "{{ vm_name }}"
-      validate_certs: false
-    register: nodepoolstatus
-    until:
-      - nodepoolstatus.resources[0].status.conditions[-1].type == "Ready"
-      - nodepoolstatus.resources[0].status.conditions[-1].status == "True"
-    delay: 10
-    retries: 240
+    - name: Wait until Node Pool is ready
+      kubernetes.core.k8s_info:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        api_version: hypershift.openshift.io/v1alpha1
+        kind: NodePool
+        namespace: "{{ vm_name }}"
+        validate_certs: false
+      register: nodepoolstatus
+      until:
+        - nodepoolstatus.resources[0].status.conditions[-1].type == "Ready"
+        - nodepoolstatus.resources[0].status.conditions[-1].status == "True"
+      delay: 10
+      retries: 240
 
-  - name: Get Import Secrets
-    kubernetes.core.k8s_info:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      kind: Secret
-      namespace: "{{ vm_name }}"
-      name: "{{ vm_name }}-import"
-      validate_certs: false
-    register: importsecret
-    until: importsecret.resources[0].data['import.yaml'] is defined
-    retries: 60
-    delay: 10
+    - name: Get Import Secrets
+      kubernetes.core.k8s_info:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        kind: Secret
+        namespace: "{{ vm_name }}"
+        name: "{{ vm_name }}-import"
+        validate_certs: false
+      register: importsecret
+      until: importsecret.resources[0].data['import.yaml'] is defined
+      retries: 60
+      delay: 10
 
-  - name: Get Kubeadmin Secret
-    kubernetes.core.k8s_info:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      kind: Secret
-      namespace: "{{ vm_name }}"
-      name: "{{ vm_name }}-kubeadmin-password"
-      validate_certs: false
-    register: kubeadmin
-    until: kubeadmin.resources[0].data.password is defined
-    retries: 60
-    delay: 10
+    - name: Get Kubeadmin Secret
+      kubernetes.core.k8s_info:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        kind: Secret
+        namespace: "{{ vm_name }}"
+        name: "{{ vm_name }}-kubeadmin-password"
+        validate_certs: false
+      register: kubeadmin
+      until: kubeadmin.resources[0].data.password is defined
+      retries: 60
+      delay: 10
 
-  - name: Set host import information
-    ansible.builtin.set_fact:
-      hostimport: "{{ importsecret.resources[0].data['import.yaml'] | b64decode }}"
-      creds: "{{ importsecret.resources[0].data['crds.yaml'] | b64decode }}"
+    - name: Set host import information
+      ansible.builtin.set_fact:
+        hostimport: "{{ importsecret.resources[0].data['import.yaml'] | b64decode }}"
+        creds: "{{ importsecret.resources[0].data['crds.yaml'] | b64decode }}"
 
-  - name: Set kubeadminpassword
-    ansible.builtin.set_fact:
-      kubeadminpassword: "{{ kubeadmin.resources[0].data.password | b64decode }}"
+    - name: Set kubeadminpassword
+      ansible.builtin.set_fact:
+        kubeadminpassword: "{{ kubeadmin.resources[0].data.password | b64decode }}"
 
-  - name: Logout of main cluster
-    redhat.openshift.openshift_auth:
-      state: absent
-      host: "{{ openshift_fqdn }}"
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      validate_certs: false
-    when: openshift_auth_results.openshift_auth.api_key is defined
+    - name: Logout of main cluster
+      redhat.openshift.openshift_auth:
+        state: absent
+        host: "{{ openshift_fqdn }}"
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        validate_certs: false
+      when: openshift_auth_results.openshift_auth.api_key is defined
 
-  - name: Check that you can connect to the API page
-    ansible.builtin.uri:
-      url: https://{{ apiip }}:6443
-      validate_certs: false
-      status_code: 403
-    register: website
-    until: website.status == 403
-    retries: 60
-    delay: 10
+    - name: Check that you can connect to the API page
+      ansible.builtin.uri:
+        url: https://{{ apiip }}:6443
+        validate_certs: false
+        status_code: 403
+      register: website
+      until: website.status == 403
+      retries: 60
+      delay: 10
 
-  - name: Login to new cluster
-    redhat.openshift.openshift_auth:
-      host: "https://{{ apiip }}:6443"
-      username: "kubeadmin"
-      password: "{{ kubeadminpassword }}"
-      validate_certs: false
-    register: openshiftnew_auth_results
+    - name: Login to new cluster
+      redhat.openshift.openshift_auth:
+        host: "https://{{ apiip }}:6443"
+        username: "kubeadmin"
+        password: "{{ kubeadminpassword }}"
+        validate_certs: false
+      register: openshiftnew_auth_results
 
-  - name: Import creds
-    kubernetes.core.k8s:
-      api_key: "{{ openshiftnew_auth_results.openshift_auth.api_key }}"
-      host: "https://{{ apiip }}:6443"
-      definition: "{{ creds }}"
-      validate_certs: false
+    - name: Import creds
+      kubernetes.core.k8s:
+        api_key: "{{ openshiftnew_auth_results.openshift_auth.api_key }}"
+        host: "https://{{ apiip }}:6443"
+        definition: "{{ creds }}"
+        validate_certs: false
 
-  - name: Complete Import
-    kubernetes.core.k8s:
-      api_key: "{{ openshiftnew_auth_results.openshift_auth.api_key }}"
-      host: "https://{{ apiip }}:6443"
-      definition: "{{ hostimport }}"
-      validate_certs: false
+    - name: Complete Import
+      kubernetes.core.k8s:
+        api_key: "{{ openshiftnew_auth_results.openshift_auth.api_key }}"
+        host: "https://{{ apiip }}:6443"
+        definition: "{{ hostimport }}"
+        validate_certs: false
 
-  - name: Display kubeadmin password
-    ansible.builtin.debug:
-      msg: "{{ kubeadminpassword }}"
+    - name: Display kubeadmin password
+      ansible.builtin.debug:
+        msg: "{{ kubeadminpassword }}"
 
   always:
     - name: If login succeeded, try to log out of main cluster
