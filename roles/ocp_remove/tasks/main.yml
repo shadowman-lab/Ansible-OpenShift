@@ -2,48 +2,48 @@
 - name: OCP Block
   block:
 
-  - name: Login to OpenShift
-    redhat.openshift.openshift_auth:
-      host: "{{ openshift_fqdn }}"
-      username: "{{ openshift_user }}"
-      password: "{{ openshift_password }}"
-      validate_certs: false
-    register: openshift_auth_results
+    - name: Login to OpenShift
+      redhat.openshift.openshift_auth:
+        host: "{{ openshift_fqdn }}"
+        username: "{{ openshift_user }}"
+        password: "{{ openshift_password }}"
+        validate_certs: false
+      register: openshift_auth_results
 
-  - name: Remove the {{ app_name }} service route
-    redhat.openshift.openshift_route:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      validate_certs: false
-      service: "{{ app_name }}"
-      state: absent
-      namespace: default
+    - name: Remove the service route {{ app_name }}
+      redhat.openshift.openshift_route:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        validate_certs: false
+        service: "{{ app_name }}"
+        state: absent
+        namespace: default
 
-  - name: Remove Service for the {{ app_name }} deployment
-    redhat.openshift.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      validate_certs: false
-      state: absent
-      definition:
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: "{{ app_name }}"
-          namespace: default
+    - name: Remove Service for the deployment {{ app_name }}
+      redhat.openshift.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        validate_certs: false
+        state: absent
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ app_name }}"
+            namespace: default
 
-  - name: Remove {{ app_name }} deployment
-    redhat.openshift.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      validate_certs: false
-      state: absent
-      definition:
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-          name: "{{ app_name }}"
-          namespace: default
+    - name: Remove deployment {{ app_name }}
+      redhat.openshift.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        validate_certs: false
+        state: absent
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ app_name }}"
+            namespace: default
 
   always:
     - name: If login succeeded, try to log out (revoke access token)

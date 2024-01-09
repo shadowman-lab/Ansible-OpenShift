@@ -2,74 +2,74 @@
 - name: OCP Block
   block:
 
-  - name: Login to OpenShift
-    redhat.openshift.openshift_auth:
-      host: "{{ openshift_fqdn }}"
-      username: "{{ openshift_user }}"
-      password: "{{ openshift_password }}"
-      validate_certs: false
-    register: openshift_auth_results
+    - name: Login to OpenShift
+      redhat.openshift.openshift_auth:
+        host: "{{ openshift_fqdn }}"
+        username: "{{ openshift_user }}"
+        password: "{{ openshift_password }}"
+        validate_certs: false
+      register: openshift_auth_results
 
-  - name: Create {{ app_name }} Image Stream
-    redhat.openshift.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      validate_certs: false
-      definition:
-        apiVersion: image.openshift.io/v1
-        kind: ImageStream
-        metadata:
-          name: "{{ app_name }}"
-          namespace: default
+    - name: Create Image Stream {{ app_name }}
+      redhat.openshift.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        validate_certs: false
+        definition:
+          apiVersion: image.openshift.io/v1
+          kind: ImageStream
+          metadata:
+            name: "{{ app_name }}"
+            namespace: default
 
-  - name: Create {{ app_name }} build config
-    redhat.openshift.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      validate_certs: false
-      definition:
-        kind: BuildConfig
-        apiVersion: build.openshift.io/v1
-        metadata:
-          name: "{{ app_name }}"
-          namespace: default
-          labels:
-            app: "{{ app_name }}"
-            app.kubernetes.io/component: "{{ app_name }}"
-            app.kubernetes.io/instance: "{{ app_name }}"
-            app.kubernetes.io/name: nginx
-            app.kubernetes.io/part-of: "{{ app_name }}"
-            app.openshift.io/runtime: nginx
-            app.openshift.io/runtime-version: latest
-        spec:
-          nodeSelector: null
-          output:
-            to:
-              kind: ImageStreamTag
-              name: '{{ app_name }}:latest'
-          resources: {}
-          successfulBuildsHistoryLimit: 5
-          failedBuildsHistoryLimit: 5
-          strategy:
-            type: Source
-            sourceStrategy:
-              from:
+    - name: Create build config {{ app_name }}
+      redhat.openshift.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        validate_certs: false
+        definition:
+          kind: BuildConfig
+          apiVersion: build.openshift.io/v1
+          metadata:
+            name: "{{ app_name }}"
+            namespace: default
+            labels:
+              app: "{{ app_name }}"
+              app.kubernetes.io/component: "{{ app_name }}"
+              app.kubernetes.io/instance: "{{ app_name }}"
+              app.kubernetes.io/name: nginx
+              app.kubernetes.io/part-of: "{{ app_name }}"
+              app.openshift.io/runtime: nginx
+              app.openshift.io/runtime-version: latest
+          spec:
+            nodeSelector: null
+            output:
+              to:
                 kind: ImageStreamTag
-                namespace: openshift
-                name: 'nginx:latest'
-          postCommit: {}
-          source:
-            type: Git
-            git:
-              uri: '{{ app_repo }}'
-            contextDir: /html
-          triggers:
-            - type: ImageChange
-              imageChange:
-                lastTriggeredImageID: >-
-                  image-registry.openshift-image-registry.svc:5000/openshift/nginx@sha256:77bb7779506f73ef84f2e22216c45266699c1b7301bc7ec45da0bbfb5cc0a376
-            - type: ConfigChange
-          runPolicy: Serial
+                name: '{{ app_name }}:latest'
+            resources: {}
+            successfulBuildsHistoryLimit: 5
+            failedBuildsHistoryLimit: 5
+            strategy:
+              type: Source
+              sourceStrategy:
+                from:
+                  kind: ImageStreamTag
+                  namespace: openshift
+                  name: 'nginx:latest'
+            postCommit: {}
+            source:
+              type: Git
+              git:
+                uri: '{{ app_repo }}'
+              contextDir: /html
+            triggers:
+              - type: ImageChange
+                imageChange:
+                  lastTriggeredImageID: >-
+                    image-registry.openshift-image-registry.svc:5000/openshift/nginx@sha256:77bb7779506f73ef84f2e22216c45266699c1b7301bc7ec45da0bbfb5cc0a376
+              - type: ConfigChange
+            runPolicy: Serial
 
   always:
     - name: If login succeeded, try to log out (revoke access token)

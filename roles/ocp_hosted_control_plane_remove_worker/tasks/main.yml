@@ -2,142 +2,142 @@
 - name: OCP Block
   block:
 
-  - name: Login to OpenShift
-    redhat.openshift.openshift_auth:
-      host: "{{ openshift_fqdn }}"
-      username: "{{ openshift_user }}"
-      password: "{{ openshift_password }}"
-      validate_certs: false
-    register: openshift_auth_results
+    - name: Login to OpenShift
+      redhat.openshift.openshift_auth:
+        host: "{{ openshift_fqdn }}"
+        username: "{{ openshift_user }}"
+        password: "{{ openshift_password }}"
+        validate_certs: false
+      register: openshift_auth_results
 
-  - name: Get NodePool
-    kubernetes.core.k8s_info:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      api_version: hypershift.openshift.io/v1alpha1
-      kind: NodePool
-      validate_certs: false
-    register: nodepool
-
-  - name: Set replica number
-    ansible.builtin.set_fact:
-      replicanumber: "{{ item.spec.replicas }}"
-    when: item.spec.clusterName == "{{ cluster_name }}"
-    loop: "{{ nodepool.resources }}"
-    loop_control:
-      label: "{{ item.spec.clusterName }}"
-
-  - name: Update Node Pool to 1
-    kubernetes.core.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      state: present
-      api_version: hypershift.openshift.io/v1alpha1
-      validate_certs: false
-      definition:
+    - name: Get NodePool
+      kubernetes.core.k8s_info:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        api_version: hypershift.openshift.io/v1alpha1
         kind: NodePool
-        metadata:
-          name: nodepool-{{ cluster_name }}-1
-          namespace: "{{ cluster_name }}"
-        spec:
-          clusterName: "{{ cluster_name }}"
-          replicas: 1
-          management:
-            autoRepair: false
-            upgradeType: InPlace
-          platform:
-            type: Agent
-            agent:
-              agentLabelSelector:
-                matchLabels: {}
-          release:
-            image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
-    when: replicanumber | int == 2
+        validate_certs: false
+      register: nodepool
 
-  - name: Update Node Pool to 2
-    kubernetes.core.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      state: present
-      api_version: hypershift.openshift.io/v1alpha1
-      validate_certs: false
-      definition:
-        kind: NodePool
-        metadata:
-          name: nodepool-{{ cluster_name }}-1
-          namespace: "{{ cluster_name }}"
-        spec:
-          clusterName: "{{ cluster_name }}"
-          replicas: 2
-          management:
-            autoRepair: false
-            upgradeType: InPlace
-          platform:
-            type: Agent
-            agent:
-              agentLabelSelector:
-                matchLabels: {}
-          release:
-            image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
-    when: replicanumber | int == 3
+    - name: Set replica number
+      ansible.builtin.set_fact:
+        replicanumber: "{{ item.spec.replicas }}"
+      when: item.spec.clusterName == "{{ cluster_name }}" # noqa no-jinja-when
+      loop: "{{ nodepool.resources }}"
+      loop_control:
+        label: "{{ item.spec.clusterName }}"
 
-  - name: Update Node Pool to 3
-    kubernetes.core.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      state: present
-      api_version: hypershift.openshift.io/v1alpha1
-      validate_certs: false
-      definition:
-        kind: NodePool
-        metadata:
-          name: nodepool-{{ cluster_name }}-1
-          namespace: "{{ cluster_name }}"
-        spec:
-          clusterName: "{{ cluster_name }}"
-          replicas: 3
-          management:
-            autoRepair: false
-            upgradeType: InPlace
-          platform:
-            type: Agent
-            agent:
-              agentLabelSelector:
-                matchLabels: {}
-          release:
-            image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
-    when: replicanumber | int == 4
-  
-  - name: Get Agents
-    kubernetes.core.k8s_info:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      api_version: agent-install.openshift.io/v1beta1
-      kind: Agent
-      validate_certs: false
-    register: output
+    - name: Update Node Pool to 1
+      kubernetes.core.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        state: present
+        api_version: hypershift.openshift.io/v1alpha1
+        validate_certs: false
+        definition:
+          kind: NodePool
+          metadata:
+            name: nodepool-{{ cluster_name }}-1
+            namespace: "{{ cluster_name }}"
+          spec:
+            clusterName: "{{ cluster_name }}"
+            replicas: 1
+            management:
+              autoRepair: false
+              upgradeType: InPlace
+            platform:
+              type: Agent
+              agent:
+                agentLabelSelector:
+                  matchLabels: {}
+            release:
+              image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+      when: replicanumber | int == 2
 
-  - name: Set name of host
-    ansible.builtin.set_fact:
-      agenthostname: "{{ item.metadata.name }}"
-    when: item.spec.hostname == "{{ vm_name }}"
-    loop: "{{ output.resources }}"
-    loop_control:
-      label: "{{ item.metadata.name }}"
+    - name: Update Node Pool to 2
+      kubernetes.core.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        state: present
+        api_version: hypershift.openshift.io/v1alpha1
+        validate_certs: false
+        definition:
+          kind: NodePool
+          metadata:
+            name: nodepool-{{ cluster_name }}-1
+            namespace: "{{ cluster_name }}"
+          spec:
+            clusterName: "{{ cluster_name }}"
+            replicas: 2
+            management:
+              autoRepair: false
+              upgradeType: InPlace
+            platform:
+              type: Agent
+              agent:
+                agentLabelSelector:
+                  matchLabels: {}
+            release:
+              image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+      when: replicanumber | int == 3
 
-  - name: Delete Host
-    kubernetes.core.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      state: absent
-      api_version: agent-install.openshift.io/v1beta1
-      definition:
+    - name: Update Node Pool to 3
+      kubernetes.core.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        state: present
+        api_version: hypershift.openshift.io/v1alpha1
+        validate_certs: false
+        definition:
+          kind: NodePool
+          metadata:
+            name: nodepool-{{ cluster_name }}-1
+            namespace: "{{ cluster_name }}"
+          spec:
+            clusterName: "{{ cluster_name }}"
+            replicas: 3
+            management:
+              autoRepair: false
+              upgradeType: InPlace
+            platform:
+              type: Agent
+              agent:
+                agentLabelSelector:
+                  matchLabels: {}
+            release:
+              image: quay.io/openshift-release-dev/ocp-release:4.11.18-x86_64
+      when: replicanumber | int == 4
+
+    - name: Get Agents
+      kubernetes.core.k8s_info:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        api_version: agent-install.openshift.io/v1beta1
         kind: Agent
-        metadata:
-          name: "{{ agenthostname }}"
-          namespace: shadowman-lab
-      validate_certs: false
-    when: agenthostname is defined
+        validate_certs: false
+      register: output
+
+    - name: Set name of host
+      ansible.builtin.set_fact:
+        agenthostname: "{{ item.metadata.name }}"
+      when: item.spec.hostname == "{{ vm_name }}"  # noqa no-jinja-when
+      loop: "{{ output.resources }}"
+      loop_control:
+        label: "{{ item.metadata.name }}"
+
+    - name: Delete Host
+      kubernetes.core.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        state: absent
+        api_version: agent-install.openshift.io/v1beta1
+        definition:
+          kind: Agent
+          metadata:
+            name: "{{ agenthostname }}"
+            namespace: shadowman-lab
+        validate_certs: false
+      when: agenthostname is defined
 
   always:
     - name: If login succeeded, try to log out (revoke access token)

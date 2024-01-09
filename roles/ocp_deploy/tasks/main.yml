@@ -2,85 +2,85 @@
 - name: OCP Block
   block:
 
-  - name: Login to OpenShift
-    redhat.openshift.openshift_auth:
-      host: "{{ openshift_fqdn }}"
-      username: "{{ openshift_user }}"
-      password: "{{ openshift_password }}"
-      validate_certs: false
-    register: openshift_auth_results
+    - name: Login to OpenShift
+      redhat.openshift.openshift_auth:
+        host: "{{ openshift_fqdn }}"
+        username: "{{ openshift_user }}"
+        password: "{{ openshift_password }}"
+        validate_certs: false
+      register: openshift_auth_results
 
-  - name: Create {{ app_name }} deployment
-    redhat.openshift.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      validate_certs: false
-      definition:
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-          name: "{{ app_name }}"
-          namespace: default
-        spec:
-          replicas: 3
-          selector:
-            matchLabels:
-              app: "{{ app_name }}"
-          template:
-            metadata:
-              labels:
+    - name: Create deployment {{ app_name }}
+      redhat.openshift.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        validate_certs: false
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ app_name }}"
+            namespace: default
+          spec:
+            replicas: 3
+            selector:
+              matchLabels:
                 app: "{{ app_name }}"
-            spec:
-              containers:
-                - name: "{{ app_name }}"
-                  image: image-registry.openshift-image-registry.svc:5000/default/{{ app_name }}
-                  ports:
-                    - containerPort: 8080
+            template:
+              metadata:
+                labels:
+                  app: "{{ app_name }}"
+              spec:
+                containers:
+                  - name: "{{ app_name }}"
+                    image: image-registry.openshift-image-registry.svc:5000/default/{{ app_name }}
+                    ports:
+                      - containerPort: 8080
 
-  - name: Create Service for the {{ app_name }} deployment
-    redhat.openshift.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      validate_certs: false
-      definition:
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: "{{ app_name }}"
-          namespace: default
-        spec:
-          ports:
-            - port: 443
-              targetPort: 8080
-          selector:
-            app: "{{ app_name }}"
+    - name: Create Service for the deployment {{ app_name }}
+      redhat.openshift.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        validate_certs: false
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ app_name }}"
+            namespace: default
+          spec:
+            ports:
+              - port: 443
+                targetPort: 8080
+            selector:
+              app: "{{ app_name }}"
 
-  - name: Expose the {{ app_name }} service externally
-    redhat.openshift.openshift_route:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      validate_certs: false
-      termination: edge
-      tls:
-        insecure_policy: allow
-      service: "{{ app_name }}"
-      namespace: default
-    register: route
+    - name: Expose the service externally {{ app_name }}
+      redhat.openshift.openshift_route:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        validate_certs: false
+        termination: edge
+        tls:
+          insecure_policy: allow
+        service: "{{ app_name }}"
+        namespace: default
+      register: route
 
-  - name: Display Link for Application
-    ansible.builtin.debug:
-      msg: "https://{{ route.result.spec.host }}"
+    - name: Display Link for Application
+      ansible.builtin.debug:
+        msg: "https://{{ route.result.spec.host }}"
 
-  - name: Set stats for the e-mail body and ServiceNow
-    ansible.builtin.set_stats:
-      data:
-        email_body: "{{ app_name }}: https://{{ route.result.spec.host }} "
-        work_notes: "[code]<a href='https://{{ route.result.spec.host }}'>{{ app_name }}</a>[/code] "
+    - name: Set stats for the e-mail body and ServiceNow
+      ansible.builtin.set_stats:
+        data:
+          email_body: "{{ app_name }}: https://{{ route.result.spec.host }} "
+          work_notes: "[code]<a href='https://{{ route.result.spec.host }}'>{{ app_name }}</a>[/code] "
 
-  - name: Set stats for the e-mail subject
-    ansible.builtin.set_stats:
-      data:
-        email_subject: "Ansible OpenShift Web Link"
+    - name: Set stats for the e-mail subject
+      ansible.builtin.set_stats:
+        data:
+          email_subject: "Ansible OpenShift Web Link"
 
   always:
     - name: If login succeeded, try to log out (revoke access token)

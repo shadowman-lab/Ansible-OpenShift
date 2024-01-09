@@ -2,135 +2,135 @@
 - name: OCP Block
   block:
 
-  - name: Login to OpenShift
-    redhat.openshift.openshift_auth:
-      host: "{{ openshift_fqdn }}"
-      username: "{{ openshift_user }}"
-      password: "{{ openshift_password }}"
-      validate_certs: false
-    register: openshift_auth_results
+    - name: Login to OpenShift
+      redhat.openshift.openshift_auth:
+        host: "{{ openshift_fqdn }}"
+        username: "{{ openshift_user }}"
+        password: "{{ openshift_password }}"
+        validate_certs: false
+      register: openshift_auth_results
 
-  - name: Remove KlusterLetAddonConfig
-    kubernetes.core.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      state: absent
-      api_version: agent.open-cluster-management.io/v1
-      validate_certs: false
-      definition:
-        kind: KlusterletAddonConfig
-        metadata:
-          name: "{{ vm_name }}"
-          namespace: "{{ vm_name }}"
-
-  - name: Remove Managed Cluster
-    kubernetes.core.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      state: absent
-      api_version: cluster.open-cluster-management.io/v1
-      validate_certs: false
-      definition:
-        kind: ManagedCluster
-        metadata:
-          labels:
-            cloud: hypershift
+    - name: Remove KlusterLetAddonConfig
+      kubernetes.core.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        state: absent
+        api_version: agent.open-cluster-management.io/v1
+        validate_certs: false
+        definition:
+          kind: KlusterletAddonConfig
+          metadata:
             name: "{{ vm_name }}"
-            cluster.open-cluster-management.io/clusterset: 'default'
-          name: "{{ vm_name }}"
+            namespace: "{{ vm_name }}"
 
-  - name: Remove Node Pool
-    kubernetes.core.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      state: absent
-      api_version: hypershift.openshift.io/v1alpha1
-      validate_certs: false
-      definition:
-        kind: NodePool
-        metadata:
-          name: nodepool-{{ vm_name }}-1
-          namespace: "{{ vm_name }}"
+    - name: Remove Managed Cluster
+      kubernetes.core.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        state: absent
+        api_version: cluster.open-cluster-management.io/v1
+        validate_certs: false
+        definition:
+          kind: ManagedCluster
+          metadata:
+            labels:
+              cloud: hypershift
+              name: "{{ vm_name }}"
+              cluster.open-cluster-management.io/clusterset: 'default'
+            name: "{{ vm_name }}"
 
-  - name: Remove public key
-    kubernetes.core.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      state: absent
-      validate_certs: false
-      definition:
-        kind: Secret
-        metadata:
-          name: sshkey-cluster-{{ vm_name }}
-          namespace: "{{ vm_name }}"
+    - name: Remove Node Pool
+      kubernetes.core.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        state: absent
+        api_version: hypershift.openshift.io/v1alpha1
+        validate_certs: false
+        definition:
+          kind: NodePool
+          metadata:
+            name: nodepool-{{ vm_name }}-1
+            namespace: "{{ vm_name }}"
 
-  - name: Remove pull secret
-    kubernetes.core.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      state: absent
-      validate_certs: false
-      definition:
-        kind: Secret
-        metadata:
-          name: pullsecret-cluster-{{ vm_name }}
-          namespace: "{{ vm_name }}"
+    - name: Remove public key
+      kubernetes.core.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        state: absent
+        validate_certs: false
+        definition:
+          kind: Secret
+          metadata:
+            name: sshkey-cluster-{{ vm_name }}
+            namespace: "{{ vm_name }}"
 
-  - name: Remove Hosted Cluster
-    kubernetes.core.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      state: absent
-      validate_certs: false
-      api_version: hypershift.openshift.io/v1alpha1
-      definition:
-        kind: HostedCluster
-        metadata:
-          name: "{{ vm_name }}"
-          namespace: "{{ vm_name }}"
-          labels:
-            "cluster.open-cluster-management.io/clusterset": 'default'
+    - name: Remove pull secret
+      kubernetes.core.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        state: absent
+        validate_certs: false
+        definition:
+          kind: Secret
+          metadata:
+            name: pullsecret-cluster-{{ vm_name }}
+            namespace: "{{ vm_name }}"
 
-  - name: Get Agents
-    kubernetes.core.k8s_info:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      api_version: agent-install.openshift.io/v1beta1
-      kind: Agent
-      validate_certs: false
-    register: output
+    - name: Remove Hosted Cluster
+      kubernetes.core.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        state: absent
+        validate_certs: false
+        api_version: hypershift.openshift.io/v1alpha1
+        definition:
+          kind: HostedCluster
+          metadata:
+            name: "{{ vm_name }}"
+            namespace: "{{ vm_name }}"
+            labels:
+              "cluster.open-cluster-management.io/clusterset": 'default'
 
-  - name: Set name of host
-    ansible.builtin.set_fact:
-      agenthostname: "{{ item.metadata.name }}"
-    when: item.spec.hostname == "{{ vm_name }}"
-    loop: "{{ output.resources }}"
-    loop_control:
-      label: "{{ item.metadata.name }}"
-
-  - name: Delete Host
-    kubernetes.core.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      state: absent
-      api_version: agent-install.openshift.io/v1beta1
-      definition:
+    - name: Get Agents
+      kubernetes.core.k8s_info:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        api_version: agent-install.openshift.io/v1beta1
         kind: Agent
-        metadata:
-          name: "{{ agenthostname }}"
-          namespace: shadowman-lab
-      validate_certs: false
-    when: agenthostname is defined
+        validate_certs: false
+      register: output
 
-  - name: Remove a k8s namespace
-    kubernetes.core.k8s:
-      api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
-      host: "{{ openshift_fqdn }}"
-      name: "{{ vm_name }}"
-      validate_certs: false
-      api_version: v1
-      kind: Namespace
-      state: absent
+    - name: Set name of host
+      ansible.builtin.set_fact:
+        agenthostname: "{{ item.metadata.name }}"
+      when: item.spec.hostname == "{{ vm_name }}"  # noqa no-jinja-when
+      loop: "{{ output.resources }}"
+      loop_control:
+        label: "{{ item.metadata.name }}"
+
+    - name: Delete Host
+      kubernetes.core.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        state: absent
+        api_version: agent-install.openshift.io/v1beta1
+        definition:
+          kind: Agent
+          metadata:
+            name: "{{ agenthostname }}"
+            namespace: shadowman-lab
+        validate_certs: false
+      when: agenthostname is defined
+
+    - name: Remove a k8s namespace
+      kubernetes.core.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        name: "{{ vm_name }}"
+        validate_certs: false
+        api_version: v1
+        kind: Namespace
+        state: absent
 
   always:
     - name: If login succeeded, try to log out (revoke access token)

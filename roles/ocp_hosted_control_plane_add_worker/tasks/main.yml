@@ -56,7 +56,7 @@
     - name: Set replica number
       ansible.builtin.set_fact:
         replicanumber: "{{ item.spec.replicas }}"
-      when: item.spec.clusterName == "{{ cluster_name }}"
+      when: item.spec.clusterName == "{{ cluster_name }}"  # noqa no-jinja-when
       loop: "{{ nodepool.resources }}"
       loop_control:
         label: "{{ item.spec.clusterName }}"
