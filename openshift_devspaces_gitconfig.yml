@@ -1,0 +1,7 @@
+---
+- name: Deploy gitconfig for devspaces user
+  hosts: localhost
+  gather_facts: false
+
+  roles:
+    - ocp_devspaces_git_config

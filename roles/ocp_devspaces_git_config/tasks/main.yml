@@ -1,0 +1,53 @@
+---
+- name: OCP Block
+  block:
+
+    - name: Login to OpenShift
+      redhat.openshift.openshift_auth:
+        host: "{{ openshift_fqdn }}"
+        username: "{{ openshift_user }}"
+        password: "{{ openshift_password }}"
+        validate_certs: false
+      register: openshift_auth_results
+
+    - name: Ensure user namespace is created
+      redhat.openshift.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        name: "{{ devspacesuser }}-devspaces"
+        api_version: v1
+        kind: Namespace
+        state: present
+        validate_certs: false
+
+    - name: Ensure gitconfig is created
+      redhat.openshift.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        validate_certs: false
+        definition:
+          kind: ConfigMap
+          apiVersion: v1
+          metadata:
+            name: workspace-userdata-gitconfig-configmap
+            namespace: "{{ devspacesuser }}-devspaces"
+            labels:
+              controller.devfile.io/mount-to-devworkspace: 'true'
+              controller.devfile.io/watch-configmap: 'true'
+            annotations:
+              controller.devfile.io/mount-as: subpath
+              controller.devfile.io/mount-path: /etc/
+          data:
+            gitconfig: |-
+              [user]
+                name = {{ git_name }}
+                email = {{ git_email }}
+
+  always:
+    - name: If login succeeded, try to log out (revoke access token)
+      redhat.openshift.openshift_auth:
+        state: absent
+        host: "{{ openshift_fqdn }}"
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        validate_certs: false
+      when: openshift_auth_results.openshift_auth.api_key is defined
