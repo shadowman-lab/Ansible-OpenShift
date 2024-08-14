@@ -76,6 +76,7 @@
         data:
           email_body: "{{ app_name }}: https://{{ route.result.spec.host }} "
           work_notes: "[code]<a href='https://{{ route.result.spec.host }}'>{{ app_name }}</a>[/code] "
+          app_route: "{{ route }}"
 
     - name: Set stats for the e-mail subject
       ansible.builtin.set_stats:
