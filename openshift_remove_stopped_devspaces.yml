@@ -1,7 +1,7 @@
 ---
-- name: OpenShift remove hosted control plane
+- name: OpenShift remove stopped DevSpaces
   hosts: localhost
   gather_facts: false
 
   roles:
-    - remove_ocp_hosted_control_plane
+    - openshift_devspaces_remove_stopped
