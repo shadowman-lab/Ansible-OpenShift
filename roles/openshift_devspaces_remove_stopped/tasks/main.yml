@@ -26,6 +26,21 @@
       loop_control:
         label: "{{ item.metadata.name }}"
 
+    # - name: Delete all DevWorkspaces that have been stopped for more than 172800 seconds or 2 days
+    #   redhat.openshift.k8s:
+    #     api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+    #     host: "{{ openshift_fqdn }}"
+    #     api_version: workspace.devfile.io/v1alpha2
+    #     kind: DevWorkspace
+    #     validate_certs: false
+    #     state: absent
+    #     name: "{{ item.metadata.name }}"
+    #     namespace: "{{ item.metadata.namespace }}"
+    #   when: ((now(utc=true, fmt="%Y-%m-%d %H:%M:%S") | to_datetime) - (item["status"]["conditions"][0]["lastTransitionTime"] | to_datetime("%Y-%m-%dT%H:%M:%SZ"))).total_seconds() | int > 172800
+    #   loop: "{{ workspaceoutput.resources | selectattr('status.phase', '==', 'Stopped') }}"
+    #   loop_control:
+    #     label: "{{ item.metadata.name }}"
+
     - name: Delete all stopped DevWorkspaces
       redhat.openshift.k8s:
         api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
