@@ -1,99 +1,4 @@
 ---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: opa
-  labels:
-    app: opa
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: opa
-  template:
-    metadata:
-      labels:
-        app: opa
-      name: opa
-    spec:
-      containers:
-      - name: opa
-        image: openpolicyagent/opa:latest
-        args:
-        - "run"
-        - "--ignore=.*"
-        - "--server"
-        - '--addr=0.0.0.0:8181'
-        - "/policies"
-        volumeMounts:
-        - readOnly: true
-          mountPath: /policies
-          name: ansible-policy
-      volumes:
-      - name: ansible-policy
-        projected:
-          sources:
-          - configMap:
-              name: stop-all-policy
-          - configMap:
-              name: stop-extravarskeys-policy
-          - configMap:
-              name: stop-extravars-policy
-          - configMap:
-              name: stop-githubbranch-policy
-          - configMap:
-              name: stop-github-policy
-          - configMap:
-              name: stop-globalcredential-policy
-          - configMap:
-              name: stop-inventoryorg-policy
-          - configMap:
-              name: stop-maintenancewindow-policy
-          - configMap:
-              name: stop-mismatch-policy
-          - configMap:
-              name: stop-namingstandards-policy
-          - configMap:
-              name: stop-superuser-policy
-          - configMap:
-              name: stop-teambasedvars-policy
-          - configMap:
-              name: stop-restrictednetwork-policy
----
-kind: Service
-apiVersion: v1
-metadata:
-  labels:
-    app: opa
-  name: opa
-spec:
-  selector:
-    app: opa
-  ports:
-  - name: http
-    protocol: TCP
-    port: 80
-    targetPort: 8181
----
-apiVersion: route.openshift.io/v1
-kind: Route
-metadata:
-  name: opa
-  namespace: default
-spec:
-  path: /
-  to:
-    name: opa
-    weight: 100
-    kind: Service
-  host: ''
-  tls:
-    insecureEdgeTerminationPolicy: Allow
-    termination: edge
-  port:
-    targetPort: http
-  alternateBackends: []
----
 kind: ConfigMap
 apiVersion: v1
 metadata:
@@ -629,3 +534,98 @@ data:
     allowed_value(value, allowed_values) if {
       allowed_values[_] == value
     }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opa
+  labels:
+    app: opa
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opa
+  template:
+    metadata:
+      labels:
+        app: opa
+      name: opa
+    spec:
+      containers:
+      - name: opa
+        image: openpolicyagent/opa:latest
+        args:
+        - "run"
+        - "--ignore=.*"
+        - "--server"
+        - '--addr=0.0.0.0:8181'
+        - "/policies"
+        volumeMounts:
+        - readOnly: true
+          mountPath: /policies
+          name: ansible-policy
+      volumes:
+      - name: ansible-policy
+        projected:
+          sources:
+          - configMap:
+              name: stop-all-policy
+          - configMap:
+              name: stop-extravarskeys-policy
+          - configMap:
+              name: stop-extravars-policy
+          - configMap:
+              name: stop-githubbranch-policy
+          - configMap:
+              name: stop-github-policy
+          - configMap:
+              name: stop-globalcredential-policy
+          - configMap:
+              name: stop-inventoryorg-policy
+          - configMap:
+              name: stop-maintenancewindow-policy
+          - configMap:
+              name: stop-mismatch-policy
+          - configMap:
+              name: stop-namingstandards-policy
+          - configMap:
+              name: stop-superuser-policy
+          - configMap:
+              name: stop-teambasedvars-policy
+          - configMap:
+              name: stop-restrictednetwork-policy
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: opa
+  name: opa
+spec:
+  selector:
+    app: opa
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 8181
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: opa
+  namespace: default
+spec:
+  path: /
+  to:
+    name: opa
+    weight: 100
+    kind: Service
+  host: ''
+  tls:
+    insecureEdgeTerminationPolicy: Allow
+    termination: edge
+  port:
+    targetPort: http
+  alternateBackends: []
