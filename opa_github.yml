@@ -1,0 +1,79 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opa
+  labels:
+    app: opa
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opa
+  template:
+    metadata:
+      labels:
+        app: opa
+      name: opa
+    spec:
+      containers:
+      - name: opa
+        image: openpolicyagent/opa:latest
+        args:
+          - "run"
+          - "--ignore=.*"
+          - "--server"
+          - '--addr=0.0.0.0:8181'
+          - "/policies"
+        volumeMounts:
+          - readOnly: true
+            mountPath: /policies
+            name: policies
+      initContainers:
+        - name: git-clone
+          image: alpine/git
+          args:
+            - "clone"
+            - "https://github.com/shadowman-lab/Ansible-Policy.git"
+            - "/policies"
+          volumeMounts:
+            - mountPath: /policies
+              name: policies
+      volumes:
+        - name: policies
+          emptyDir:
+            sizeLimit: 500Mi
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: opa
+  name: opa
+spec:
+  selector:
+    app: opa
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 8181
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: opa
+  namespace: default
+spec:
+  path: /
+  to:
+    name: opa
+    weight: 100
+    kind: Service
+  host: ''
+  tls:
+    insecureEdgeTerminationPolicy: Allow
+    termination: edge
+  port:
+    targetPort: http
+  alternateBackends: []
