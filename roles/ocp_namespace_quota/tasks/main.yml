@@ -1,0 +1,15 @@
+---
+- name: Set Resource Quota
+  redhat.openshift.k8s:
+    api_version: v1
+    kind: ResourceQuota
+    namespace: "{{ namespace }}"
+    name: resource-quota
+    state: present
+    definition:
+      spec:
+        hard:
+          "limits.cpu": "{{ limits_cpu }}"
+          "limits.memory": "{{ limits_memory }}"
+          "requests.cpu": "{{ requests_cpu }}"
+          "requests.memory": "{{ requests_memory }}"

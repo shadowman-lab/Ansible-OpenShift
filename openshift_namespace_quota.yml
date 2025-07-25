@@ -1,0 +1,7 @@
+---
+- name: Set Quota for namespace in OpenShift
+  hosts: localhost
+  gather_facts: false
+
+  roles:
+    - ocp_namespace_quota
