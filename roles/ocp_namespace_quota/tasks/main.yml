@@ -1,15 +1,37 @@
 ---
-- name: Set Resource Quota
-  redhat.openshift.k8s:
-    api_version: v1
-    kind: ResourceQuota
-    namespace: "{{ namespace }}"
-    name: resource-quota
-    state: present
-    definition:
-      spec:
-        hard:
-          "limits.cpu": "{{ limits_cpu }}"
-          "limits.memory": "{{ limits_memory }}"
-          "requests.cpu": "{{ requests_cpu }}"
-          "requests.memory": "{{ requests_memory }}"
+- name: OCP Block
+  block:
+
+    - name: Login to OpenShift
+      redhat.openshift.openshift_auth:
+        host: "{{ openshift_fqdn }}"
+        username: "{{ openshift_user }}"
+        password: "{{ openshift_password }}"
+        validate_certs: false
+      register: openshift_auth_results
+
+    - name: Set Resource Quota
+      redhat.openshift.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        api_version: v1
+        kind: ResourceQuota
+        namespace: "{{ namespace }}"
+        name: resource-quota
+        state: present
+        definition:
+          spec:
+            hard:
+              "limits.cpu": "{{ limits_cpu }}"
+              "limits.memory": "{{ limits_memory }}"
+              "requests.cpu": "{{ requests_cpu }}"
+              "requests.memory": "{{ requests_memory }}"
+
+  always:
+    - name: If login succeeded, try to log out (revoke access token)
+      redhat.openshift.openshift_auth:
+        state: absent
+        host: "{{ openshift_fqdn }}"
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        validate_certs: false
+      when: openshift_auth_results.openshift_auth.api_key is defined
