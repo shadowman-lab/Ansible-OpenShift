@@ -1,0 +1,5 @@
+---
+requests_cpu: '2'
+limits_cpu: '3'
+requests_memory: '5Gi'
+limits_memory: '10Gi'
