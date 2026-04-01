@@ -1,0 +1,7 @@
+---
+- name: Update OpenShift Group
+  hosts: localhost
+  gather_facts: false
+
+  roles:
+    - ocp_add_user_to_group

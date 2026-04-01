@@ -1,0 +1,55 @@
+---
+- name: OCP Block
+  block:
+
+    - name: Login to OpenShift
+      redhat.openshift.openshift_auth:
+        host: "{{ openshift_fqdn }}"
+        username: "{{ openshift_user }}"
+        password: "{{ openshift_password }}"
+        validate_certs: false
+      register: openshift_auth_results
+
+    - name: Build effective user list
+      ansible.builtin.set_fact:
+        effective_users: "{{ [awx_user_name] }}"
+
+    - name: Get current group
+      kubernetes.core.k8s_info:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        api_version: user.openshift.io/v1
+        validate_certs: false
+        kind: Group
+        name: "{{ ocp_group }}"
+      register: group_info
+
+    - name: Extract current group members
+      ansible.builtin.set_fact:
+        current_members: "{{ group_info.resources[0].users | default([]) }}"
+
+    - name: Identify users not yet in the group
+      ansible.builtin.set_fact:
+        users_to_add: "{{ effective_users | difference(current_members) }}"
+
+    - name: Update Users in Group
+      redhat.openshift.k8s:
+        state: present
+        validate_certs: false
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        api_version: user.openshift.io/v1
+        kind: Group
+        name: "{{ ocp_group }}"
+        definition:
+          users: "{{ current_members + users_to_add }}"
+      when: users_to_add | length > 0
+
+  always:
+    - name: If login succeeded, try to log out (revoke access token)
+      redhat.openshift.openshift_auth:
+        state: absent
+        host: "{{ openshift_fqdn }}"
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        validate_certs: false
+      when: openshift_auth_results.openshift_auth.api_key is defined
