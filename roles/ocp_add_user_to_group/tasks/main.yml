@@ -12,7 +12,7 @@
 
     - name: Build effective user list
       ansible.builtin.set_fact:
-        effective_users: "{{ [awx_user_name] }}"
+        effective_users: "{{ [tower_user_name] }}"
 
     - name: Get current group
       kubernetes.core.k8s_info:
