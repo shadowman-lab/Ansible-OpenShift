@@ -1,0 +1,431 @@
+---
+# OpenShift Patching Workflow
+# Performs pre-flight health checks, VMware snapshots, ServiceNow change management,
+# cluster update, post-update validation, and cleanup.
+#
+# Required collections: kubernetes.core, community.vmware, servicenow.itsm
+#
+# Required variables (set via extra-vars, vault, or survey):
+#   ocp_target_version, ocp_update_channel,
+#   vcenter_hostname, vcenter_username, vcenter_password, vcenter_datacenter, vcenter_vm_folder,
+#   snow_instance, snow_username, snow_password, snow_assignment_group
+
+# ──────────────────────────────────────────────────────────────────────
+# Play 1 — Pre-Patching: Health Checks and VMware Snapshots
+# ──────────────────────────────────────────────────────────────────────
+- name: Pre-patching preparation
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    ocp_target_version: ""
+    ocp_update_channel: "stable-4.20"
+    vcenter_hostname: ""
+    vcenter_username: ""
+    vcenter_password: ""
+    vcenter_datacenter: ""
+    vcenter_vm_folder: ""
+    snapshot_name: "pre-patch-{{ ocp_target_version }}-{{ ansible_date_time.date | default(lookup('pipe', 'date +%Y-%m-%d')) }}"
+    snapshot_description: "Pre-patching snapshot before OpenShift update to {{ ocp_target_version }}"
+
+  tasks:
+    - name: Validate required variables are set
+      ansible.builtin.assert:
+        that:
+          - ocp_target_version | length > 0
+          - vcenter_hostname | length > 0
+          - vcenter_username | length > 0
+          - vcenter_password | length > 0
+          - vcenter_datacenter | length > 0
+          - vcenter_vm_folder | length > 0
+        fail_msg: "Required variables must be set: ocp_target_version, vcenter_hostname, vcenter_username, vcenter_password, vcenter_datacenter, vcenter_vm_folder"
+
+    # ── Cluster Information Gathering ──
+    - name: Get current cluster version
+      kubernetes.core.k8s_info:
+        api_version: config.openshift.io/v1
+        kind: ClusterVersion
+        name: version
+      register: cluster_version
+
+    - name: Set current version fact
+      ansible.builtin.set_fact:
+        ocp_current_version: "{{ cluster_version.resources[0].status.desired.version }}"
+        cluster_id: "{{ cluster_version.resources[0].spec.clusterID | default('unknown') }}"
+
+    - name: Display cluster version info
+      ansible.builtin.debug:
+        msg: "Cluster {{ cluster_id }} running {{ ocp_current_version }}, target {{ ocp_target_version }}"
+
+    # ── Health Checks ──
+    - name: Get all cluster nodes
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Node
+      register: cluster_nodes
+
+    - name: Check all nodes are Ready
+      ansible.builtin.assert:
+        that:
+          - cluster_nodes.resources | length > 0
+          - cluster_nodes.resources | map(attribute='status.conditions') | map('selectattr', 'type', 'equalto', 'Ready') | map('first') | map(attribute='status') | reject('equalto', 'True') | list | length == 0
+        fail_msg: "One or more cluster nodes are not in Ready state"
+        success_msg: "All {{ cluster_nodes.resources | length }} nodes are Ready"
+
+    - name: Set node facts
+      ansible.builtin.set_fact:
+        ocp_node_names: "{{ cluster_nodes.resources | map(attribute='metadata.name') | list }}"
+        ocp_node_count: "{{ cluster_nodes.resources | length }}"
+
+    - name: Get all ClusterOperators
+      kubernetes.core.k8s_info:
+        api_version: config.openshift.io/v1
+        kind: ClusterOperator
+      register: cluster_operators
+
+    - name: Check no ClusterOperators are degraded
+      ansible.builtin.assert:
+        that:
+          - cluster_operators.resources | map(attribute='status.conditions') | map('selectattr', 'type', 'equalto', 'Degraded') | map('first') | map(attribute='status') | reject('equalto', 'False') | list | length == 0
+        fail_msg: "One or more ClusterOperators are in Degraded state"
+        success_msg: "No ClusterOperators are degraded"
+
+    - name: Check all ClusterOperators are Available
+      ansible.builtin.assert:
+        that:
+          - cluster_operators.resources | map(attribute='status.conditions') | map('selectattr', 'type', 'equalto', 'Available') | map('first') | map(attribute='status') | reject('equalto', 'True') | list | length == 0
+        fail_msg: "One or more ClusterOperators are not Available"
+        success_msg: "All ClusterOperators are Available"
+
+    - name: Check for pending CSRs
+      kubernetes.core.k8s_info:
+        api_version: certificates.k8s.io/v1
+        kind: CertificateSigningRequest
+      register: pending_csrs
+
+    - name: Verify no pending CSRs
+      ansible.builtin.assert:
+        that:
+          - pending_csrs.resources | selectattr('status', 'undefined') | list | length == 0
+        fail_msg: "There are pending CSRs that must be approved before patching"
+        success_msg: "No pending CSRs found"
+
+    - name: Pre-flight health checks passed
+      ansible.builtin.debug:
+        msg: "All health checks passed — {{ ocp_node_count }} nodes ready, all operators healthy"
+
+    # ── VMware Snapshots ──
+    - name: Take VMware snapshot of each OpenShift node
+      vmware.vmware.vm_snapshot:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: false
+        datacenter: "{{ vcenter_datacenter }}"
+        folder: "{{ vcenter_vm_folder }}"
+        name: "{{ item }}"
+        state: present
+        snapshot_name: "{{ snapshot_name }}"
+        description: "{{ snapshot_description }}"
+        memory_dump: false
+        quiesce: true
+      loop: "{{ ocp_node_names }}"
+      register: snapshot_results
+
+    - name: Verify all snapshots succeeded
+      ansible.builtin.assert:
+        that:
+          - snapshot_results.results | rejectattr('changed', 'equalto', true) | list | length == 0
+        fail_msg: "One or more VMware snapshots failed"
+        success_msg: "Snapshots created for all {{ ocp_node_count }} nodes"
+
+# ──────────────────────────────────────────────────────────────────────
+# Play 2 — Create ServiceNow Change Request
+# ──────────────────────────────────────────────────────────────────────
+- name: Create ServiceNow change request
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    snow_instance: ""
+    snow_username: ""
+    snow_password: ""
+    snow_assignment_group: ""
+
+  tasks:
+    - name: Validate ServiceNow variables are set
+      ansible.builtin.assert:
+        that:
+          - snow_instance | length > 0
+          - snow_username | length > 0
+          - snow_password | length > 0
+          - snow_assignment_group | length > 0
+        fail_msg: "Required ServiceNow variables must be set: snow_instance, snow_username, snow_password, snow_assignment_group"
+
+    - name: Create change request for OpenShift patching
+      servicenow.itsm.change_request:
+        instance:
+          host: "https://{{ snow_instance }}.service-now.com"
+          username: "{{ snow_username }}"
+          password: "{{ snow_password }}"
+        state: new
+        type: standard
+        priority: 3
+        risk: moderate
+        impact: medium
+        category: "Software"
+        short_description: "OpenShift Cluster Update: {{ ocp_current_version }} → {{ ocp_target_version }}"
+        description: |
+          OpenShift Cluster Patching
+          ─────────────────────────
+          Cluster ID: {{ cluster_id }}
+          Current Version: {{ ocp_current_version }}
+          Target Version: {{ ocp_target_version }}
+          Update Channel: {{ ocp_update_channel }}
+          Node Count: {{ ocp_node_count }}
+          Nodes: {{ ocp_node_names | join(', ') }}
+          VMware Snapshots: Completed ({{ snapshot_name }})
+
+          Procedure:
+          1. Pre-flight health checks — COMPLETED
+          2. VMware snapshots — COMPLETED
+          3. Set update channel to {{ ocp_update_channel }}
+          4. Apply cluster update to {{ ocp_target_version }}
+          5. Monitor and validate update
+          6. Post-update health checks
+          7. Cleanup snapshots on success
+        assignment_group: "{{ snow_assignment_group }}"
+        other:
+          justification: "Security and stability patches for OpenShift cluster"
+          implementation_plan: "Automated update via Ansible — snapshots taken for rollback"
+          backout_plan: "Revert to VMware snapshots taken pre-patch ({{ snapshot_name }})"
+          test_plan: "Post-update cluster health checks and operator validation"
+      register: change_request
+
+    - name: Set change request number fact
+      ansible.builtin.set_fact:
+        snow_change_number: "{{ change_request.record.number }}"
+        snow_change_sys_id: "{{ change_request.record.sys_id }}"
+
+    - name: Display change request number
+      ansible.builtin.debug:
+        msg: "ServiceNow Change Request {{ snow_change_number }} created"
+
+    - name: Wait for Change Request approval
+      servicenow.itsm.change_request_info:
+        instance:
+          host: "https://{{ snow_instance }}.service-now.com"
+          username: "{{ snow_username }}"
+          password: "{{ snow_password }}"
+        sys_id: "{{ snow_change_sys_id }}"
+      until: change_request_status.records[0].state == "scheduled"
+      retries: 50
+      delay: 10
+      register: change_request_status
+      delegate_to: localhost
+
+    - name: Move change request to Implement state
+      servicenow.itsm.change_request:
+        instance:
+          host: "https://{{ snow_instance }}.service-now.com"
+          username: "{{ snow_username }}"
+          password: "{{ snow_password }}"
+        state: implement
+        sys_id: "{{ snow_change_sys_id }}"
+        other:
+          work_notes: "Beginning automated OpenShift cluster update"
+
+# ──────────────────────────────────────────────────────────────────────
+# Play 3 — Perform OpenShift Cluster Update
+# ──────────────────────────────────────────────────────────────────────
+- name: Update OpenShift cluster
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    ocp_update_channel: "stable-4.16"
+    ocp_target_version: ""
+    update_timeout_minutes: 120
+    update_poll_interval_seconds: 60
+
+  tasks:
+    - name: Update cluster to perform patching
+      block:
+        - name: Set update channel on ClusterVersion
+          kubernetes.core.k8s:
+            api_version: config.openshift.io/v1
+            kind: ClusterVersion
+            name: version
+            definition:
+              spec:
+                channel: "{{ ocp_update_channel }}"
+
+        - name: Trigger cluster update to target version
+          kubernetes.core.k8s:
+            api_version: config.openshift.io/v1
+            kind: ClusterVersion
+            name: version
+            definition:
+              spec:
+                desiredUpdate:
+                  version: "{{ ocp_target_version }}"
+
+        - name: Wait for cluster update to complete
+          kubernetes.core.k8s_info:
+            api_version: config.openshift.io/v1
+            kind: ClusterVersion
+            name: version
+          register: update_status
+          until:
+            - update_status.resources[0].status.desired.version == ocp_target_version
+            - update_status.resources[0].status.history[0].version == ocp_target_version
+            - update_status.resources[0].status.history[0].state == "Completed"
+          retries: "{{ update_timeout_minutes }}"
+          delay: "{{ update_poll_interval_seconds }}"
+
+        - name: Cluster update completed
+          ansible.builtin.debug:
+            msg: "Cluster successfully updated to {{ ocp_target_version }}"
+
+        - name: Set update result fact
+          ansible.builtin.set_fact:
+            update_succeeded: true
+
+      rescue:
+        - name: Cluster update failed
+          ansible.builtin.debug:
+            msg: "Cluster update to {{ ocp_target_version }} FAILED — VMware snapshots preserved for rollback"
+
+        - name: Set update result fact on failure
+          ansible.builtin.set_fact:
+            update_succeeded: false
+
+        - name: Update ServiceNow with failure
+          servicenow.itsm.change_request:
+            instance:
+              host: "https://{{ snow_instance }}.service-now.com"
+              username: "{{ snow_username }}"
+              password: "{{ snow_password }}"
+            state: review
+            sys_id: "{{ snow_change_sys_id }}"
+            other:
+              work_notes: "FAILED — Cluster update to {{ ocp_target_version }} did not complete. VMware snapshots ({{ snapshot_name }}) preserved for rollback."
+              close_code: "unsuccessful"
+
+        - name: Fail the playbook
+          ansible.builtin.fail:
+            msg: "OpenShift cluster update failed. Change request {{ snow_change_number }} updated. Snapshots preserved."
+
+# ──────────────────────────────────────────────────────────────────────
+# Play 4 — Post-Update Validation and Cleanup
+# ──────────────────────────────────────────────────────────────────────
+- name: Post-update validation and cleanup
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Post-update validation
+      block:
+        # ── Post-Update Health Checks ──
+        - name: Verify all nodes are Ready after update
+          kubernetes.core.k8s_info:
+            api_version: v1
+            kind: Node
+          register: post_nodes
+          until:
+            - post_nodes.resources | map(attribute='status.conditions') | map('selectattr', 'type', 'equalto', 'Ready') | map('first') | map(attribute='status') | reject('equalto', 'True') | list | length == 0
+          retries: 30
+          delay: 30
+
+        - name: Verify no ClusterOperators are degraded after update
+          kubernetes.core.k8s_info:
+            api_version: config.openshift.io/v1
+            kind: ClusterOperator
+          register: post_operators
+          until:
+            - post_operators.resources | map(attribute='status.conditions') | map('selectattr', 'type', 'equalto', 'Degraded') | map('first') | map(attribute='status') | reject('equalto', 'False') | list | length == 0
+            - post_operators.resources | map(attribute='status.conditions') | map('selectattr', 'type', 'equalto', 'Available') | map('first') | map(attribute='status') | reject('equalto', 'True') | list | length == 0
+          retries: 30
+          delay: 30
+
+        - name: Verify updated cluster version
+          kubernetes.core.k8s_info:
+            api_version: config.openshift.io/v1
+            kind: ClusterVersion
+            name: version
+          register: final_version
+
+        - name: Confirm version matches target
+          ansible.builtin.assert:
+            that:
+              - final_version.resources[0].status.desired.version == ocp_target_version
+            fail_msg: "Cluster version {{ final_version.resources[0].status.desired.version }} does not match target {{ ocp_target_version }}"
+            success_msg: "Cluster successfully running {{ ocp_target_version }}"
+
+        - name: Post-update health checks passed
+          ansible.builtin.debug:
+            msg: "All post-update health checks passed — cluster is healthy on {{ ocp_target_version }}"
+
+        # ── Close ServiceNow Change Request ──
+        - name: Close change request as successful
+          servicenow.itsm.change_request:
+            instance:
+              host: "https://{{ snow_instance }}.service-now.com"
+              username: "{{ snow_username }}"
+              password: "{{ snow_password }}"
+            state: closed
+            close_code: "successful"
+            close_notes: "OpenShift cluster updated from {{ ocp_current_version }} to {{ ocp_target_version }}. All health checks passed."
+            sys_id: "{{ snow_change_sys_id }}"
+            other:
+              work_notes: "Update completed successfully. All {{ ocp_node_count }} nodes healthy. All ClusterOperators available. Cleaning up VMware snapshots."
+
+        # ── Cleanup VMware Snapshots ──
+        - name: Remove pre-patch VMware snapshots
+          vmware.vmware.vm_snapshot:
+            hostname: "{{ vcenter_hostname }}"
+            username: "{{ vcenter_username }}"
+            password: "{{ vcenter_password }}"
+            validate_certs: false
+            datacenter: "{{ vcenter_datacenter }}"
+            name: "{{ item }}"
+            folder: "{{ vcenter_vm_folder }}"
+            state: absent
+            snapshot_name: "{{ snapshot_name }}"
+          loop: "{{ ocp_node_names }}"
+
+        - name: Patching workflow complete
+          ansible.builtin.debug:
+            msg: >-
+              OpenShift patching complete.
+              Version: {{ ocp_current_version }} → {{ ocp_target_version }}.
+              Change Request: {{ snow_change_number }} (closed successful).
+              Snapshots cleaned up.
+
+      rescue:
+        - name: Post-update validation failed
+          ansible.builtin.debug:
+            msg: "Post-update validation failed — VMware snapshots preserved for investigation"
+
+        - name: Update ServiceNow with post-update failure
+          servicenow.itsm.change_request:
+            instance:
+              host: "https://{{ snow_instance }}.service-now.com"
+              username: "{{ snow_username }}"
+              password: "{{ snow_password }}"
+            state: review
+            sys_id: "{{ snow_change_sys_id }}"
+            other:
+              work_notes: "ATTENTION — Cluster updated to {{ ocp_target_version }} but post-update health checks failed. VMware snapshots ({{ snapshot_name }}) preserved. Manual investigation required."
+              close_code: "unsuccessful"
+
+        - name: Fail with instructions
+          ansible.builtin.fail:
+            msg: >-
+              Post-update validation failed. Change request {{ snow_change_number }} flagged for review.
+              VMware snapshots ({{ snapshot_name }}) are preserved.
+              Investigate cluster health before removing snapshots.
