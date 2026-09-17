@@ -53,10 +53,7 @@
                     mode: 420
                     overwrite: true
                     contents:
-                      source: >-
-                        data:text/plain;charset=utf-8;base64,
-                        {{ ('[Journal]\nSystemMaxUse=' + journald_system_max_use
-                        + '\nMaxRetentionSec=' + journald_max_retention_sec + '\n') | b64encode }}
+                      source: "{{ 'data:text/plain;charset=utf-8;base64,' + (('[Journal]\\nSystemMaxUse=' + journald_system_max_use + '\\nMaxRetentionSec=' + journald_max_retention_sec + '\\n') | b64encode) }}"
 
   always:
     - name: If login succeeded, try to log out (revoke access token)
