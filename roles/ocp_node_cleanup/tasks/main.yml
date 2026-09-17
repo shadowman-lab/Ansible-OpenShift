@@ -1,0 +1,69 @@
+---
+- name: OCP Block
+  block:
+
+    - name: Login to OpenShift
+      redhat.openshift.openshift_auth:
+        host: "{{ openshift_fqdn }}"
+        username: "{{ openshift_user }}"
+        password: "{{ openshift_password }}"
+        validate_certs: false
+      register: openshift_auth_results
+
+    - name: Set kubelet image and container log garbage collection thresholds
+      redhat.openshift.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        validate_certs: false
+        api_version: machineconfiguration.openshift.io/v1
+        kind: KubeletConfig
+        name: "{{ machine_config_pool }}-image-log-gc"
+        state: present
+        definition:
+          spec:
+            machineConfigPoolSelector:
+              matchLabels:
+                "pools.operator.machineconfiguration.openshift.io/{{ machine_config_pool }}": ""
+            kubeletConfig:
+              imageMinimumGCAge: "{{ kubelet_image_min_gc_age }}"
+              imageGCHighThresholdPercent: "{{ kubelet_image_gc_high_threshold_percent }}"
+              imageGCLowThresholdPercent: "{{ kubelet_image_gc_low_threshold_percent }}"
+              containerLogMaxSize: "{{ container_log_max_size }}"
+              containerLogMaxFiles: "{{ container_log_max_files }}"
+
+    - name: Set journald retention limits on nodes via MachineConfig
+      redhat.openshift.k8s:
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        validate_certs: false
+        api_version: machineconfiguration.openshift.io/v1
+        kind: MachineConfig
+        name: "99-{{ machine_config_pool }}-journald-cleanup"
+        state: present
+        definition:
+          metadata:
+            labels:
+              machineconfiguration.openshift.io/role: "{{ machine_config_pool }}"
+          spec:
+            config:
+              ignition:
+                version: 3.2.0
+              storage:
+                files:
+                  - path: /etc/systemd/journald.conf.d/99-cleanup.conf
+                    mode: 420
+                    overwrite: true
+                    contents:
+                      source: >-
+                        data:text/plain;charset=utf-8;base64,
+                        {{ ('[Journal]\nSystemMaxUse=' + journald_system_max_use
+                        + '\nMaxRetentionSec=' + journald_max_retention_sec + '\n') | b64encode }}
+
+  always:
+    - name: If login succeeded, try to log out (revoke access token)
+      redhat.openshift.openshift_auth:
+        state: absent
+        host: "{{ openshift_fqdn }}"
+        api_key: "{{ openshift_auth_results.openshift_auth.api_key }}"
+        validate_certs: false
+      when: openshift_auth_results.openshift_auth.api_key is defined

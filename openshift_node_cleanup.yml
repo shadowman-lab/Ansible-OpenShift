@@ -1,0 +1,7 @@
+---
+- name: Clean up old logs and container images on OpenShift nodes
+  hosts: localhost
+  gather_facts: false
+
+  roles:
+    - ocp_node_cleanup

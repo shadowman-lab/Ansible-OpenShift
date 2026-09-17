@@ -1,0 +1,13 @@
+---
+machine_config_pool: worker
+
+# KubeletConfig: image and container log garbage collection
+kubelet_image_min_gc_age: 2m0s
+kubelet_image_gc_high_threshold_percent: 80
+kubelet_image_gc_low_threshold_percent: 70
+container_log_max_size: 50Mi
+container_log_max_files: 3
+
+# MachineConfig: journald retention on the host
+journald_system_max_use: 500M
+journald_max_retention_sec: 3day
