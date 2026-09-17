@@ -22,8 +22,7 @@
         definition:
           spec:
             machineConfigPoolSelector:
-              matchLabels:
-                pools.operator.machineconfiguration.openshift.io/{{ machine_config_pool }}: ""
+              matchLabels: "{{ {'pools.operator.machineconfiguration.openshift.io/' ~ machine_config_pool: ''} }}"
             kubeletConfig:
               imageMinimumGCAge: "{{ kubelet_image_min_gc_age }}"
               imageGCHighThresholdPercent: "{{ kubelet_image_gc_high_threshold_percent }}"
