@@ -23,15 +23,14 @@
           - postgres
           - -d
           - "{{ rhdh_catalog_db }}"
-          - -c
-          - >-
-            UPDATE final_entities
-            SET final_entity = jsonb_set(
-              final_entity::jsonb,
-              '{metadata,annotations,{{ rhdh_catalog_annotation_key }}}',
-              '"{{ rhdh_catalog_annotation_value }}"'
-            )
-            WHERE entity_ref = '{{ rhdh_catalog_entity_ref }}';
+        stdin: |
+          UPDATE final_entities
+          SET final_entity = jsonb_set(
+            final_entity::jsonb,
+            '{metadata,annotations,{{ rhdh_catalog_annotation_key }}}',
+            '"{{ rhdh_catalog_annotation_value }}"'
+          )
+          WHERE entity_ref = '{{ rhdh_catalog_entity_ref }}';
       register: ocp_rhdh_catalog_annotation_patch_result
 
     - name: Show patch result
