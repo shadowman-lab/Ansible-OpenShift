@@ -1,0 +1,48 @@
+---
+- name: RHDH catalog annotation block
+  block:
+    - name: Login to OpenShift
+      redhat.openshift.openshift_auth:
+        host: "{{ openshift_fqdn }}"
+        username: "{{ openshift_user }}"
+        password: "{{ openshift_password }}"
+        validate_certs: false
+      register: ocp_rhdh_catalog_annotation_auth_results
+
+    - name: Patch aap.platform/is_superuser annotation onto the catalog entity
+      kubernetes.core.k8s_exec:
+        api_key: "{{ ocp_rhdh_catalog_annotation_auth_results.openshift_auth.api_key }}"
+        host: "{{ openshift_fqdn }}"
+        validate_certs: false
+        namespace: "{{ rhdh_namespace }}"
+        pod: "{{ rhdh_postgres_pod }}"
+        container: "{{ rhdh_postgres_container }}"
+        command:
+          - psql
+          - -U
+          - postgres
+          - -d
+          - "{{ rhdh_catalog_db }}"
+          - -c
+          - >-
+            UPDATE final_entities
+            SET final_entity = jsonb_set(
+              final_entity::jsonb,
+              '{metadata,annotations,{{ rhdh_catalog_annotation_key }}}',
+              '"{{ rhdh_catalog_annotation_value }}"'
+            )
+            WHERE entity_ref = '{{ rhdh_catalog_entity_ref }}';
+      register: ocp_rhdh_catalog_annotation_patch_result
+
+    - name: Show patch result
+      ansible.builtin.debug:
+        var: ocp_rhdh_catalog_annotation_patch_result.stdout
+
+  always:
+    - name: If login succeeded, try to log out (revoke access token)
+      redhat.openshift.openshift_auth:
+        state: absent
+        host: "{{ openshift_fqdn }}"
+        api_key: "{{ ocp_rhdh_catalog_annotation_auth_results.openshift_auth.api_key }}"
+        validate_certs: false
+      when: ocp_rhdh_catalog_annotation_auth_results.openshift_auth.api_key is defined

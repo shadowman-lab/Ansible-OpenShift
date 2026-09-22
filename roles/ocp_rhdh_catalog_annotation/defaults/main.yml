@@ -1,0 +1,8 @@
+---
+rhdh_namespace: rhdh
+rhdh_postgres_pod: backstage-psql-redhat-dev-hub-0
+rhdh_postgres_container: postgresql
+rhdh_catalog_db: backstage_plugin_catalog
+rhdh_catalog_entity_ref: "user:default/adworjan"
+rhdh_catalog_annotation_key: "aap.platform/is_superuser"
+rhdh_catalog_annotation_value: "true"

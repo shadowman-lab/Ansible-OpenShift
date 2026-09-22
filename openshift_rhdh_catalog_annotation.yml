@@ -1,0 +1,7 @@
+---
+- name: Patch RHDH catalog entity annotations directly in Postgres
+  hosts: localhost
+  gather_facts: false
+
+  roles:
+    - ocp_rhdh_catalog_annotation
