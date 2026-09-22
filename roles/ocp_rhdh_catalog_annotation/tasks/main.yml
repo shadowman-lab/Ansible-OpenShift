@@ -10,6 +10,13 @@
       register: ocp_rhdh_catalog_annotation_auth_results
 
     - name: Patch aap.platform/is_superuser annotation onto the catalog entity
+      vars:
+        ocp_rhdh_catalog_annotation_sql: >-
+          UPDATE final_entities SET final_entity = jsonb_set(
+          final_entity::jsonb,
+          '{metadata,annotations,{{ rhdh_catalog_annotation_key }}}',
+          '"{{ rhdh_catalog_annotation_value }}"') WHERE entity_ref =
+          '{{ rhdh_catalog_entity_ref }}';
       kubernetes.core.k8s_exec:
         api_key: "{{ ocp_rhdh_catalog_annotation_auth_results.openshift_auth.api_key }}"
         host: "{{ openshift_fqdn }}"
@@ -18,19 +25,11 @@
         pod: "{{ rhdh_postgres_pod }}"
         container: "{{ rhdh_postgres_container }}"
         command:
-          - psql
-          - -U
-          - postgres
-          - -d
-          - "{{ rhdh_catalog_db }}"
-        stdin: |
-          UPDATE final_entities
-          SET final_entity = jsonb_set(
-            final_entity::jsonb,
-            '{metadata,annotations,{{ rhdh_catalog_annotation_key }}}',
-            '"{{ rhdh_catalog_annotation_value }}"'
-          )
-          WHERE entity_ref = '{{ rhdh_catalog_entity_ref }}';
+          - sh
+          - -c
+          - >-
+            'echo {{ ocp_rhdh_catalog_annotation_sql | b64encode }} | base64 -d
+            | psql -U postgres -d {{ rhdh_catalog_db }}'
       register: ocp_rhdh_catalog_annotation_patch_result
 
     - name: Show patch result
