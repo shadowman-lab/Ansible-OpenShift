@@ -24,12 +24,9 @@
         namespace: "{{ rhdh_namespace }}"
         pod: "{{ rhdh_postgres_pod }}"
         container: "{{ rhdh_postgres_container }}"
-        command:
-          - sh
-          - -c
-          - >-
-            'echo {{ ocp_rhdh_catalog_annotation_sql | b64encode }} | base64 -d
-            | psql -U postgres -d {{ rhdh_catalog_db }}'
+        command: >-
+          sh -c 'echo {{ ocp_rhdh_catalog_annotation_sql | b64encode }} |
+          base64 -d | psql -U postgres -d {{ rhdh_catalog_db }}'
       register: ocp_rhdh_catalog_annotation_patch_result
 
     - name: Show patch result
